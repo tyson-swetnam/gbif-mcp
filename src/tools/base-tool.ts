@@ -1,4 +1,5 @@
 import { ZodSchema } from 'zod';
+import { zodToJsonSchema as convertZodToJsonSchema } from 'zod-to-json-schema';
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { logger } from '../utils/logger.js';
 
@@ -109,63 +110,11 @@ export abstract class BaseTool<TInput = any, TOutput = any> {
    * Convert Zod schema to JSON Schema for MCP
    */
   protected zodToJsonSchema(schema: ZodSchema): any {
-    // This is a simplified conversion - in production, use a library like zod-to-json-schema
-    const def = (schema as any)._def;
-
-    if (def.typeName === 'ZodObject') {
-      const properties: any = {};
-      const required: string[] = [];
-
-      for (const [key, value] of Object.entries(def.shape())) {
-        properties[key] = this.zodToJsonSchema(value as ZodSchema);
-
-        const subDef = (value as any)._def;
-        if (subDef.typeName !== 'ZodOptional' && subDef.typeName !== 'ZodNullable') {
-          required.push(key);
-        }
-      }
-
-      return {
-        type: 'object',
-        properties,
-        required: required.length > 0 ? required : undefined,
-      };
-    }
-
-    if (def.typeName === 'ZodString') {
-      return { type: 'string', description: def.description };
-    }
-
-    if (def.typeName === 'ZodNumber') {
-      return { type: 'number', description: def.description };
-    }
-
-    if (def.typeName === 'ZodBoolean') {
-      return { type: 'boolean', description: def.description };
-    }
-
-    if (def.typeName === 'ZodArray') {
-      return {
-        type: 'array',
-        items: this.zodToJsonSchema(def.type),
-        description: def.description,
-      };
-    }
-
-    if (def.typeName === 'ZodOptional') {
-      return this.zodToJsonSchema(def.innerType);
-    }
-
-    if (def.typeName === 'ZodEnum') {
-      return {
-        type: 'string',
-        enum: def.values,
-        description: def.description,
-      };
-    }
-
-    // Default fallback
-    return { type: 'string' };
+    // Use the proper zod-to-json-schema library for accurate conversion
+    return convertZodToJsonSchema(schema, {
+      target: 'jsonSchema7',
+      $refStrategy: 'none',
+    });
   }
 
   /**
