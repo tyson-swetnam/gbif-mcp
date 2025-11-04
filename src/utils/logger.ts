@@ -88,8 +88,9 @@ export const logger = winston.createLogger({
   levels,
   format: createFormat(),
   transports: [
+    // Send ALL logs to stderr when running as MCP server (stdout is for MCP protocol only)
     new winston.transports.Console({
-      stderrLevels: ['error'],
+      stderrLevels: ['error', 'warn', 'info', 'debug'],
     }),
   ],
   exitOnError: false,
