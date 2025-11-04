@@ -22,14 +22,33 @@ import { MCPError, MCPErrorCode, MCPErrorFormatter } from './protocol/mcp-errors
 
 // Import services
 import { SpeciesService } from './services/species/species.service.js';
+import { OccurrenceService } from './services/occurrence/occurrence.service.js';
 
-// Import tools
+// Import species tools
 import {
   SpeciesSearchTool,
   SpeciesGetTool,
   SpeciesSuggestTool,
   SpeciesMatchTool,
-} from './tools/species/species-search.tool.js';
+  SpeciesVernacularNamesTool,
+  SpeciesSynonymsTool,
+  SpeciesChildrenTool,
+  SpeciesParentsTool,
+  SpeciesDescriptionsTool,
+  SpeciesDistributionsTool,
+  SpeciesMediaTool,
+} from './tools/species/index.js';
+
+// Import occurrence tools
+import {
+  OccurrenceSearchTool,
+  OccurrenceGetTool,
+  OccurrenceCountTool,
+  OccurrenceDownloadTool,
+  OccurrenceDownloadPredicateBuilderTool,
+  OccurrenceDownloadStatusTool,
+  OccurrenceVerbatimTool,
+} from './tools/occurrence/index.js';
 
 /**
  * Server statistics for monitoring
@@ -101,20 +120,35 @@ class GBIFMCPServer {
     try {
       // Create service instances
       const speciesService = new SpeciesService(this.client);
+      const occurrenceService = new OccurrenceService(this.client);
 
-      // Register species tools
+      // Register all species tools
       this.toolRegistry.register(new SpeciesSearchTool(speciesService));
       this.toolRegistry.register(new SpeciesGetTool(speciesService));
       this.toolRegistry.register(new SpeciesSuggestTool(speciesService));
       this.toolRegistry.register(new SpeciesMatchTool(speciesService));
+      this.toolRegistry.register(new SpeciesVernacularNamesTool(speciesService));
+      this.toolRegistry.register(new SpeciesSynonymsTool(speciesService));
+      this.toolRegistry.register(new SpeciesChildrenTool(speciesService));
+      this.toolRegistry.register(new SpeciesParentsTool(speciesService));
+      this.toolRegistry.register(new SpeciesDescriptionsTool(speciesService));
+      this.toolRegistry.register(new SpeciesDistributionsTool(speciesService));
+      this.toolRegistry.register(new SpeciesMediaTool(speciesService));
 
-      // TODO: Register other service tools as they are implemented
-      // const occurrenceService = new OccurrenceService(this.client);
-      // this.toolRegistry.register(new OccurrenceSearchTool(occurrenceService));
+      // Register all occurrence tools
+      this.toolRegistry.register(new OccurrenceSearchTool(occurrenceService));
+      this.toolRegistry.register(new OccurrenceGetTool(occurrenceService));
+      this.toolRegistry.register(new OccurrenceCountTool(occurrenceService));
+      this.toolRegistry.register(new OccurrenceDownloadTool(occurrenceService));
+      this.toolRegistry.register(new OccurrenceDownloadPredicateBuilderTool(occurrenceService));
+      this.toolRegistry.register(new OccurrenceDownloadStatusTool(occurrenceService));
+      this.toolRegistry.register(new OccurrenceVerbatimTool(occurrenceService));
 
       const tools = this.toolRegistry.getAll();
       logger.info('Services initialized successfully', {
         toolCount: tools.length,
+        speciesTools: 11,
+        occurrenceTools: 7,
         tools: tools.map(t => t.getDefinition().name),
       });
     } catch (error) {

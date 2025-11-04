@@ -217,7 +217,9 @@ export interface Dataset {
   created?: string;
   modified?: string;
   publishingOrganizationKey?: string;
+  publishingOrganizationTitle?: string;
   hostingOrganizationKey?: string;
+  hostingOrganizationTitle?: string;
   installationKey?: string;
   parentDatasetKey?: string;
   duplicateOfDatasetKey?: string;
@@ -235,6 +237,21 @@ export interface Dataset {
   language?: string;
   dataLanguage?: string;
   pubDate?: string;
+  recordCount?: number;
+}
+
+export interface DatasetSearchParams {
+  q?: string;
+  type?: string;
+  subtype?: string;
+  keyword?: string;
+  publishingCountry?: string;
+  publishingOrg?: string;
+  hostingOrg?: string;
+  decade?: number;
+  license?: string;
+  limit?: number;
+  offset?: number;
 }
 
 export interface Organization {
@@ -264,6 +281,40 @@ export interface Organization {
   tags?: any[];
   identifiers?: any[];
   comments?: any[];
+}
+
+export interface OrganizationSearchParams {
+  q?: string;
+  country?: string;
+  isEndorsed?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+export interface Network {
+  key: string;
+  title: string;
+  description?: string;
+  language?: string;
+  email?: string[];
+  phone?: string[];
+  homepage?: string[];
+  logoUrl?: string;
+  numConstituents?: number;
+  created?: string;
+  modified?: string;
+  contacts?: any[];
+  endpoints?: any[];
+  machineTags?: any[];
+  tags?: any[];
+  identifiers?: any[];
+  comments?: any[];
+}
+
+export interface NetworkSearchParams {
+  q?: string;
+  limit?: number;
+  offset?: number;
 }
 
 // Response wrapper types
@@ -410,29 +461,88 @@ export interface FacetCount {
 
 // Literature API Types
 export interface Literature {
+  id?: string;
   key?: string;
   title?: string;
-  authors?: any[];
+  authors?: Array<{
+    firstName?: string;
+    lastName?: string;
+  }>;
   year?: number;
+  month?: number;
+  day?: number;
   source?: string;
-  identifiers?: any;
+  identifiers?: {
+    doi?: string;
+    [key: string]: any;
+  };
   keywords?: string[];
   websites?: string[];
+  openAccess?: boolean;
   open_access?: boolean;
+  peerReview?: boolean;
   peer_review?: boolean;
   publisher?: string;
   topics?: string[];
+  literatureType?: string;
   literature_type?: string;
-  relevance?: any;
+  relevance?: string;
+  countriesOfResearcher?: string[];
   countries?: string[];
+  countriesOfCoverage?: string[];
   country_research?: string[];
   gbif_region?: string[];
+  gbifDatasetKey?: string[];
+  gbifDownloadKey?: string[];
+  publishedDate?: string;
   published_date?: string;
   accessed?: string;
+  created?: string;
   abstract?: string;
+  tags?: string[];
+}
+
+export interface LiteratureSearchParams {
+  q?: string;
+  countriesOfResearcher?: string;
+  countriesOfCoverage?: string;
+  literatureType?: string;
+  relevance?: string;
+  topics?: string;
+  year?: number;
+  source?: string;
+  peerReview?: boolean;
+  openAccess?: boolean;
+  gbifDatasetKey?: string;
+  publishingOrganizationKey?: string;
+  gbifDownloadKey?: string;
+  gbifOccurrenceKey?: number;
+  limit?: number;
+  offset?: number;
 }
 
 // Map API Types
+export interface MapTileParams {
+  z: number;
+  x: number;
+  y: number;
+  format?: 'png' | 'mvt';
+  scale?: 1 | 2 | 3;
+  srs?: 'EPSG:3857' | 'EPSG:4326';
+  style?: string;
+  // Filters
+  taxonKey?: number;
+  datasetKey?: string;
+  country?: string;
+  publishingOrg?: string;
+  publishingCountry?: string;
+  year?: string | number;
+  basisOfRecord?: string | string[];
+  bin?: 'hex' | 'square';
+  hexPerTile?: number;
+  squareSize?: number;
+}
+
 export interface MapRequest {
   source?: string;
   z?: number;
