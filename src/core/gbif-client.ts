@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios';
+import axios, { AxiosInstance, AxiosError } from 'axios';
 import { LRUCache } from 'lru-cache';
 import PQueue from 'p-queue';
 import { config } from '../config/config.js';
@@ -6,12 +6,109 @@ import { logger } from '../utils/logger.js';
 import type { GBIFError } from '../types/gbif.types.js';
 
 /**
- * GBIF API Client with rate limiting, caching, and retry logic
+ * Circuit breaker states
+ */
+enum CircuitState {
+  CLOSED = 'CLOSED',     // Normal operation
+  OPEN = 'OPEN',         // Circuit is open, reject requests
+  HALF_OPEN = 'HALF_OPEN' // Testing if service recovered
+}
+
+/**
+ * Circuit breaker for GBIF API requests
+ */
+class CircuitBreaker {
+  private state: CircuitState = CircuitState.CLOSED;
+  private failureCount = 0;
+  private successCount = 0;
+  private lastFailureTime = 0;
+  private readonly failureThreshold = 5;
+  private readonly successThreshold = 2;
+  private readonly timeout = 60000; // 1 minute
+
+  /**
+   * Check if request should be allowed
+   */
+  canRequest(): boolean {
+    if (this.state === CircuitState.CLOSED) {
+      return true;
+    }
+
+    if (this.state === CircuitState.OPEN) {
+      // Check if timeout has elapsed
+      if (Date.now() - this.lastFailureTime >= this.timeout) {
+        logger.info('Circuit breaker transitioning to HALF_OPEN');
+        this.state = CircuitState.HALF_OPEN;
+        this.successCount = 0;
+        return true;
+      }
+      return false;
+    }
+
+    // HALF_OPEN state - allow request
+    return true;
+  }
+
+  /**
+   * Record a successful request
+   */
+  recordSuccess(): void {
+    this.failureCount = 0;
+
+    if (this.state === CircuitState.HALF_OPEN) {
+      this.successCount++;
+      if (this.successCount >= this.successThreshold) {
+        logger.info('Circuit breaker transitioning to CLOSED');
+        this.state = CircuitState.CLOSED;
+        this.successCount = 0;
+      }
+    }
+  }
+
+  /**
+   * Record a failed request
+   */
+  recordFailure(): void {
+    this.failureCount++;
+    this.lastFailureTime = Date.now();
+
+    if (this.state === CircuitState.HALF_OPEN) {
+      logger.warn('Circuit breaker transitioning to OPEN (failure during HALF_OPEN)');
+      this.state = CircuitState.OPEN;
+      this.successCount = 0;
+    } else if (this.failureCount >= this.failureThreshold) {
+      logger.warn(`Circuit breaker transitioning to OPEN (${this.failureCount} failures)`);
+      this.state = CircuitState.OPEN;
+    }
+  }
+
+  /**
+   * Get current circuit state
+   */
+  getState(): CircuitState {
+    return this.state;
+  }
+
+  /**
+   * Reset circuit breaker
+   */
+  reset(): void {
+    this.state = CircuitState.CLOSED;
+    this.failureCount = 0;
+    this.successCount = 0;
+    this.lastFailureTime = 0;
+    logger.info('Circuit breaker reset');
+  }
+}
+
+/**
+ * GBIF API Client with rate limiting, caching, retry logic, and circuit breaker
  */
 export class GBIFClient {
   private readonly client: AxiosInstance;
   private readonly cache: LRUCache<string, any>;
   private readonly requestQueue: PQueue;
+  private readonly circuitBreaker: CircuitBreaker;
   private requestCount = 0;
   private requestWindow = Date.now();
   private backoffTime = 0;
@@ -43,6 +140,9 @@ export class GBIFClient {
       concurrency: config.rateLimit.maxConcurrentRequests,
     });
 
+    // Initialize circuit breaker
+    this.circuitBreaker = new CircuitBreaker();
+
     // Add request interceptor for authentication
     this.client.interceptors.request.use((request) => {
       if (config.gbif.username && config.gbif.password) {
@@ -67,6 +167,13 @@ export class GBIFClient {
    * Make a GET request to GBIF API
    */
   async get<T>(path: string, params?: Record<string, any>): Promise<T> {
+    // Check circuit breaker
+    if (!this.circuitBreaker.canRequest()) {
+      const error = new Error('Circuit breaker is OPEN - service temporarily unavailable');
+      logger.warn('Request rejected by circuit breaker', { path, state: this.circuitBreaker.getState() });
+      throw error;
+    }
+
     const cacheKey = this.getCacheKey('GET', path, params);
 
     // Check cache if enabled
@@ -83,6 +190,9 @@ export class GBIFClient {
         logger.debug('Making GBIF API request', { path, params });
         const response = await this.client.get<T>(path, { params });
 
+        // Record success with circuit breaker
+        this.circuitBreaker.recordSuccess();
+
         // Cache successful responses
         if (config.features.enableCaching && response.data) {
           this.cache.set(cacheKey, response.data);
@@ -90,6 +200,8 @@ export class GBIFClient {
 
         return response.data;
       } catch (error) {
+        // Record failure with circuit breaker
+        this.circuitBreaker.recordFailure();
         logger.error('GBIF API request failed', { path, params, error });
         throw error;
       }
@@ -245,9 +357,10 @@ export class GBIFClient {
     }
 
     // Transform error for better handling
+    const responseData = error.response?.data as any;
     const gbifError: GBIFError = {
       error: error.code || 'UNKNOWN_ERROR',
-      message: error.response?.data?.message || error.message,
+      message: responseData?.message || error.message,
       statusCode: status,
     };
 
@@ -287,5 +400,19 @@ export class GBIFClient {
       hits: 0, // Would need to track this separately
       misses: 0, // Would need to track this separately
     };
+  }
+
+  /**
+   * Get circuit breaker state
+   */
+  getCircuitState(): string {
+    return this.circuitBreaker.getState();
+  }
+
+  /**
+   * Reset circuit breaker
+   */
+  resetCircuitBreaker(): void {
+    this.circuitBreaker.reset();
   }
 }

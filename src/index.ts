@@ -13,12 +13,13 @@ import { ToolRegistry } from './core/tool-registry.js';
 
 // Import services
 import { SpeciesService } from './services/species/species.service.js';
-import { OccurrenceService } from './services/occurrence/occurrence.service.js';
-import { RegistryService } from './services/registry/registry.service.js';
-import { MapsService } from './services/maps/maps.service.js';
-import { LiteratureService } from './services/literature/literature.service.js';
-import { VocabulariesService } from './services/vocabularies/vocabularies.service.js';
-import { ValidatorService } from './services/validator/validator.service.js';
+// Other services will be imported when their tools are implemented
+// import { OccurrenceService } from './services/occurrence/occurrence.service.js';
+// import { RegistryService } from './services/registry/registry.service.js';
+// import { MapsService } from './services/maps/maps.service.js';
+// import { LiteratureService } from './services/literature/literature.service.js';
+// import { VocabulariesService } from './services/vocabularies/vocabularies.service.js';
+// import { ValidatorService } from './services/validator/validator.service.js';
 
 // Import tools
 import {
@@ -62,12 +63,13 @@ class GBIFMCPServer {
   private initializeServices(): void {
     // Create service instances
     const speciesService = new SpeciesService(this.client);
-    const occurrenceService = new OccurrenceService(this.client);
-    const registryService = new RegistryService(this.client);
-    const mapsService = new MapsService(this.client);
-    const literatureService = new LiteratureService(this.client);
-    const vocabulariesService = new VocabulariesService(this.client);
-    const validatorService = new ValidatorService(this.client);
+    // Other services will be used in future tool implementations
+    // const occurrenceService = new OccurrenceService(this.client);
+    // const registryService = new RegistryService(this.client);
+    // const mapsService = new MapsService(this.client);
+    // const literatureService = new LiteratureService(this.client);
+    // const vocabulariesService = new VocabulariesService(this.client);
+    // const validatorService = new ValidatorService(this.client);
 
     // Register species tools
     this.toolRegistry.register(new SpeciesSearchTool(speciesService));
@@ -81,7 +83,6 @@ class GBIFMCPServer {
     // etc...
 
     logger.info('Services initialized', {
-      servicesCount: 7,
       toolsCount: this.toolRegistry.getAll().length,
     });
   }

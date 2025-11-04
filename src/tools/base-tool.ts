@@ -1,4 +1,4 @@
-import { z, ZodSchema } from 'zod';
+import { ZodSchema } from 'zod';
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { logger } from '../utils/logger.js';
 
@@ -9,7 +9,7 @@ export abstract class BaseTool<TInput = any, TOutput = any> {
   protected abstract readonly name: string;
   protected abstract readonly description: string;
   protected abstract readonly inputSchema: ZodSchema<TInput>;
-  protected abstract readonly outputSchema?: ZodSchema<TOutput>;
+  protected readonly outputSchema?: ZodSchema<TOutput>;
 
   /**
    * Get MCP tool definition

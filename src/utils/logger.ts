@@ -1,5 +1,9 @@
 import winston from 'winston';
 import { config } from '../config/config.js';
+import { AsyncLocalStorage } from 'async_hooks';
+
+// AsyncLocalStorage for correlation IDs
+const asyncLocalStorage = new AsyncLocalStorage<Map<string, any>>();
 
 // Define log levels
 const levels = {
@@ -24,6 +28,17 @@ const createFormat = () => {
   const formats = [
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     winston.format.errors({ stack: true }),
+    // Add correlation ID to logs
+    winston.format((info) => {
+      const store = asyncLocalStorage.getStore();
+      if (store && store.has('correlationId')) {
+        info.correlationId = store.get('correlationId');
+      }
+      if (store && store.has('requestId')) {
+        info.requestId = store.get('requestId');
+      }
+      return info;
+    })(),
   ];
 
   if (config.logging.maskSensitive) {
@@ -83,4 +98,48 @@ export const logger = winston.createLogger({
 // Create a child logger for specific contexts
 export const createLogger = (context: string) => {
   return logger.child({ context });
+};
+
+/**
+ * Set correlation ID for the current async context
+ */
+export const setCorrelationId = (correlationId: string): void => {
+  const store = asyncLocalStorage.getStore();
+  if (store) {
+    store.set('correlationId', correlationId);
+  }
+};
+
+/**
+ * Set request ID for the current async context
+ */
+export const setRequestId = (requestId: string): void => {
+  const store = asyncLocalStorage.getStore();
+  if (store) {
+    store.set('requestId', requestId);
+  }
+};
+
+/**
+ * Get current correlation ID
+ */
+export const getCorrelationId = (): string | undefined => {
+  const store = asyncLocalStorage.getStore();
+  return store?.get('correlationId');
+};
+
+/**
+ * Run a function with a correlation context
+ */
+export const withCorrelation = <T>(correlationId: string, fn: () => T): T => {
+  const store = new Map<string, any>();
+  store.set('correlationId', correlationId);
+  return asyncLocalStorage.run(store, fn);
+};
+
+/**
+ * Generate a new correlation ID
+ */
+export const generateCorrelationId = (): string => {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
