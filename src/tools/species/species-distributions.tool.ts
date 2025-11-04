@@ -14,9 +14,9 @@ export class SpeciesDistributionsTool extends BaseTool<
   protected readonly description = 'Get known geographic distribution records for a species. Includes information about occurrence status, establishment means, and locality details.';
 
   protected readonly inputSchema = z.object({
-    key: z.number().int().positive().describe('GBIF species key'),
-    limit: z.number().min(1).max(1000).default(20).describe('Maximum number of distribution records to return'),
-    offset: z.number().min(0).default(0).describe('Pagination offset'),
+    key: z.number().int().positive().describe('GBIF species key. The unique identifier of the species whose geographic distribution you want to retrieve. Example: 5219404 (Panthera leo) returns distribution records showing where lions occur (e.g., sub-Saharan Africa), their establishment status (native/introduced), and occurrence status (present/absent/extinct). Includes both native and introduced ranges.'),
+    limit: z.number().min(1).max(1000).default(20).describe('Maximum number of distribution records to return per page. A species may have distribution records for multiple regions/countries. Range: 1-1000, default: 20.'),
+    offset: z.number().min(0).default(0).describe('Pagination offset. Determines the starting point for results. A limit of 20 and offset of 40 will get the third page of 20 results. Default: 0.'),
   });
 
   private speciesService: SpeciesService;

@@ -10,7 +10,7 @@ export class OccurrenceVerbatimTool extends BaseTool<{ key: number }, any> {
   protected readonly description = 'Get the original, unprocessed occurrence record as provided by the publisher, before GBIF interpretation. Includes all original Darwin Core fields with full URIs.';
 
   protected readonly inputSchema = z.object({
-    key: z.number().int().positive().describe('GBIF occurrence key'),
+    key: z.number().int().positive().describe('GBIF occurrence key (unique identifier). This is a numeric key that uniquely identifies an occurrence record. Example: 1258202889. Use this to retrieve the original record exactly as submitted by the data publisher, before GBIF processing and interpretation.'),
   });
 
   private occurrenceService: OccurrenceService;

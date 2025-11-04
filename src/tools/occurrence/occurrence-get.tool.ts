@@ -11,7 +11,7 @@ export class OccurrenceGetTool extends BaseTool<{ key: number }, Occurrence> {
   protected readonly description = 'Get complete details for a single occurrence record including verbatim fields, interpretation history, media, and data quality issues.';
 
   protected readonly inputSchema = z.object({
-    key: z.number().int().positive().describe('GBIF occurrence key (unique identifier)'),
+    key: z.number().int().positive().describe('GBIF occurrence key (unique identifier). This is a numeric key that uniquely identifies an occurrence record in GBIF. Example: 1258202889 (a specific specimen record). You can find occurrence keys from search results.'),
   });
 
   private occurrenceService: OccurrenceService;

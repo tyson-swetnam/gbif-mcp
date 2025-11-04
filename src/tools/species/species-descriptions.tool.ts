@@ -14,9 +14,9 @@ export class SpeciesDescriptionsTool extends BaseTool<
   protected readonly description = 'Get textual descriptions for a species from various sources. Includes morphological descriptions, habitat information, behavior, and other narrative content.';
 
   protected readonly inputSchema = z.object({
-    key: z.number().int().positive().describe('GBIF species key'),
-    limit: z.number().min(1).max(1000).default(20).describe('Maximum number of descriptions to return'),
-    offset: z.number().min(0).default(0).describe('Pagination offset'),
+    key: z.number().int().positive().describe('GBIF species key. The unique identifier of the species whose textual descriptions you want to retrieve. Example: 5219404 (Panthera leo) returns descriptions about lion morphology, behavior, habitat preferences, and life history from various authoritative sources.'),
+    limit: z.number().min(1).max(1000).default(20).describe('Maximum number of description records to return per page. A species may have multiple descriptions from different sources. Range: 1-1000, default: 20.'),
+    offset: z.number().min(0).default(0).describe('Pagination offset. Determines the starting point for results. A limit of 20 and offset of 40 will get the third page of 20 results. Default: 0.'),
   });
 
   private speciesService: SpeciesService;
