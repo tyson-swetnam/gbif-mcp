@@ -190,7 +190,7 @@ export interface OccurrenceSearchParams {
   waterBody?: string;
   stateProvince?: string;
   year?: string;
-  month?: string;
+  month?: number;
   decimalLatitude?: string;
   decimalLongitude?: string;
   elevation?: string;
@@ -416,6 +416,8 @@ export interface OccurrenceCount {
   count: number;
 }
 
+export type OccurrenceDownloadStatus = 'PREPARING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED' | 'KILLED' | 'SUSPENDED';
+
 export interface OccurrenceDownloadRequest {
   creator: string;
   notificationAddresses?: string[];
@@ -442,7 +444,7 @@ export interface OccurrenceDownload {
   created?: string;
   modified?: string;
   eraseAfter?: string;
-  status?: 'PREPARING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED' | 'KILLED';
+  status?: OccurrenceDownloadStatus;
   downloadLink?: string;
   size?: number;
   totalRecords?: number;

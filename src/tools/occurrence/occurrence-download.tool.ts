@@ -6,7 +6,7 @@ import type { OccurrenceDownloadRequest, DownloadPredicate } from '../../types/g
 /**
  * Tool for requesting large occurrence data downloads (requires authentication)
  */
-export class OccurrenceDownloadTool extends BaseTool<OccurrenceDownloadRequest, string> {
+export class OccurrenceDownloadTool extends BaseTool<any, string> {
   protected readonly name = 'gbif_occurrence_download_request';
   protected readonly description = 'Request an asynchronous download for large occurrence datasets beyond pagination limits (100,000+ records). Returns a download key for checking status. REQUIRES AUTHENTICATION: Set GBIF_USERNAME and GBIF_PASSWORD environment variables.';
 
@@ -22,11 +22,9 @@ export class OccurrenceDownloadTool extends BaseTool<OccurrenceDownloadRequest, 
       .optional()
       .default('SIMPLE_CSV')
       .describe('Download format (DWCA=Darwin Core Archive, SIMPLE_CSV=Simple CSV, SPECIES_LIST=Species list only)'),
-    predicate: z
-      .any()
-      .describe(
-        'Download predicate defining filters. Complex JSON structure with type, key, value. Use buildPredicateFromSearch or construct manually.'
-      ),
+    predicate: z.any().describe(
+      'Download predicate defining filters (REQUIRED). Complex JSON structure with type, key, value. Use buildPredicateFromSearch or construct manually.'
+    ),
   });
 
   private occurrenceService: OccurrenceService;
@@ -36,9 +34,9 @@ export class OccurrenceDownloadTool extends BaseTool<OccurrenceDownloadRequest, 
     this.occurrenceService = occurrenceService;
   }
 
-  protected async run(input: OccurrenceDownloadRequest): Promise<any> {
+  protected async run(input: any): Promise<any> {
     try {
-      const downloadKey = await this.occurrenceService.requestDownload(input);
+      const downloadKey = await this.occurrenceService.requestDownload(input as OccurrenceDownloadRequest);
 
       return this.formatResponse(
         {

@@ -35,8 +35,8 @@ export class OccurrenceSearchTool extends BaseTool<OccurrenceSearchParams, GBIFR
     waterBody: z.string().optional().describe('Water body name'),
     stateProvince: z.string().optional().describe('State or province name'),
     geometry: z.string().optional().describe('WKT geometry for spatial filtering'),
-    decimalLatitude: z.number().optional().describe('Latitude in decimal degrees'),
-    decimalLongitude: z.number().optional().describe('Longitude in decimal degrees'),
+    decimalLatitude: z.string().optional().describe('Latitude in decimal degrees (as string)'),
+    decimalLongitude: z.string().optional().describe('Longitude in decimal degrees (as string)'),
     elevation: z.string().optional().describe('Elevation range in meters (e.g., "100,500")'),
     depth: z.string().optional().describe('Depth range in meters (e.g., "0,100")'),
 
@@ -48,7 +48,7 @@ export class OccurrenceSearchTool extends BaseTool<OccurrenceSearchParams, GBIFR
     // Temporal filters
     year: z.string().optional().describe('Year or year range (e.g., "2020" or "2015,2020")'),
     month: z.number().min(1).max(12).optional().describe('Month (1-12)'),
-    decade: z.string().optional().describe('Decade (e.g., "1990")'),
+    decade: z.number().optional().describe('Decade (e.g., 199 for 1990s, calculated as year/10)'),
 
     // Dataset filters
     datasetKey: z.string().optional().describe('Dataset UUID'),
