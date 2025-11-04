@@ -280,6 +280,134 @@ export interface GBIFSingleResponse<T> {
   data: T;
 }
 
+// Species Service Enhanced Types
+export interface SpeciesMatch {
+  usageKey?: number;
+  scientificName?: string;
+  canonicalName?: string;
+  rank?: string;
+  status?: string;
+  confidence?: number;
+  matchType?: 'EXACT' | 'FUZZY' | 'HIGHERRANK' | 'NONE';
+  kingdom?: string;
+  phylum?: string;
+  class?: string;
+  order?: string;
+  family?: string;
+  genus?: string;
+  species?: string;
+  kingdomKey?: number;
+  phylumKey?: number;
+  classKey?: number;
+  orderKey?: number;
+  familyKey?: number;
+  genusKey?: number;
+  speciesKey?: number;
+  synonym?: boolean;
+  alternatives?: SpeciesMatch[];
+  note?: string;
+}
+
+export interface SpeciesMatchParams {
+  name?: string;
+  rank?: string;
+  kingdom?: string;
+  phylum?: string;
+  class?: string;
+  order?: string;
+  family?: string;
+  genus?: string;
+  strict?: boolean;
+  verbose?: boolean;
+}
+
+export interface SpeciesSuggest {
+  key: number;
+  scientificName: string;
+  canonicalName?: string;
+  rank?: string;
+}
+
+export interface VernacularName {
+  vernacularName: string;
+  language?: string;
+  source?: string;
+  sourceTaxonKey?: number;
+  preferred?: boolean;
+  taxonKey?: number;
+}
+
+export interface SpeciesSynonym {
+  key: number;
+  scientificName: string;
+  canonicalName?: string;
+  rank?: string;
+  taxonomicStatus?: string;
+  acceptedKey?: number;
+  accepted?: string;
+  kingdom?: string;
+  phylum?: string;
+  class?: string;
+  order?: string;
+  family?: string;
+  genus?: string;
+}
+
+export interface TaxonParent {
+  key: number;
+  scientificName: string;
+  canonicalName?: string;
+  rank: string;
+}
+
+// Occurrence Service Enhanced Types
+export interface OccurrenceCount {
+  count: number;
+}
+
+export interface OccurrenceDownloadRequest {
+  creator: string;
+  notificationAddresses?: string[];
+  sendNotification?: boolean;
+  format?: 'DWCA' | 'SIMPLE_CSV' | 'SPECIES_LIST' | 'SIMPLE_PARQUET';
+  predicate: DownloadPredicate;
+}
+
+export interface DownloadPredicate {
+  type: 'equals' | 'and' | 'or' | 'not' | 'in' | 'lessThan' | 'lessThanOrEquals' | 'greaterThan' | 'greaterThanOrEquals' | 'like' | 'within' | 'isNotNull' | 'isNull';
+  key?: string;
+  value?: string | number;
+  values?: (string | number)[];
+  predicates?: DownloadPredicate[];
+  geometry?: string;
+  predicate?: DownloadPredicate;
+}
+
+export interface OccurrenceDownload {
+  key: string;
+  doi?: string;
+  license?: string;
+  request?: OccurrenceDownloadRequest;
+  created?: string;
+  modified?: string;
+  eraseAfter?: string;
+  status?: 'PREPARING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED' | 'KILLED';
+  downloadLink?: string;
+  size?: number;
+  totalRecords?: number;
+  numberDatasets?: number;
+}
+
+export interface Facet {
+  field: string;
+  counts: FacetCount[];
+}
+
+export interface FacetCount {
+  name: string;
+  count: number;
+}
+
 // Literature API Types
 export interface Literature {
   key?: string;

@@ -103,8 +103,8 @@ export class SpeciesSuggestTool extends BaseTool<{ q: string; limit?: number }, 
     this.speciesService = speciesService;
   }
 
-  protected async run(input: { q: string; limit?: number }): Promise<Species[]> {
-    const suggestions = await this.speciesService.suggest(input.q, input.limit);
+  protected async run(input: { q: string; limit?: number }): Promise<any> {
+    const suggestions = await this.speciesService.suggest(input.q, { limit: input.limit });
     return this.formatResponse(suggestions, {
       query: input.q,
       count: suggestions.length,
@@ -131,11 +131,10 @@ export class SpeciesMatchTool extends BaseTool<{ name: string; strict?: boolean 
     this.speciesService = speciesService;
   }
 
-  protected async run(input: { name: string; strict?: boolean }): Promise<Species[]> {
-    const matches = await this.speciesService.match(input.name, input.strict);
-    return this.formatResponse(matches, {
+  protected async run(input: { name: string; strict?: boolean }): Promise<any> {
+    const match = await this.speciesService.match({ name: input.name, strict: input.strict });
+    return this.formatResponse(match, {
       query: input.name,
-      matchCount: matches.length,
       strict: input.strict,
     });
   }
