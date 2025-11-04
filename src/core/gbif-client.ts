@@ -127,7 +127,7 @@ export class GBIFClient {
 
     // Initialize cache
     this.cache = new LRUCache<string, any>({
-      max: config.cache.maxSize * 1024 * 1024, // Convert MB to bytes
+      maxSize: config.cache.maxSize * 1024 * 1024, // Convert MB to bytes
       ttl: config.cache.ttl,
       updateAgeOnGet: true,
       sizeCalculation: (value) => {
