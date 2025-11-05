@@ -22,18 +22,59 @@ The [Global Biodiversity Information Facility (GBIF)](https://www.gbif.org/) is 
 
 The [Model Context Protocol](https://modelcontextprotocol.io/) is an open protocol that standardizes how AI applications interact with external data sources and tools. This server implements MCP to make GBIF's biodiversity data accessible to AI assistants like Claude.
 
+## Quick Start
+
+```bash
+# 1. Clone and build
+git clone https://github.com/tyson-swetnam/gbif-mcp.git
+cd gbif-mcp
+npm install
+npm run build
+
+# 2. Add to Claude Code
+claude mcp add gbif node "$(pwd)/build/index.js"
+
+# 3. Test it
+claude chat "Search GBIF for Panthera leo occurrences in Kenya"
+```
+
+Or for Claude Desktop, add to `claude_desktop_config.json`:
+```json
+{
+  "mcpServers": {
+    "gbif": {
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/TO/gbif-mcp/build/index.js"]
+    }
+  }
+}
+```
+
 ## Features
 
-This MCP server provides access to key GBIF API endpoints:
+This MCP server provides access to key GBIF API endpoints with comprehensive parameter documentation:
 
 - **Species API**: Search for species, get taxonomic information, and match scientific names
-- **Occurrence API**: Query species occurrence records with advanced filtering
+- **Occurrence API**: Query species occurrence records with 40+ advanced filters
 - **Registry API**: Access information about datasets and publishing organizations
 - **Maps API**: Generate visualizations of biodiversity data
 - **Literature API**: Search for research papers citing GBIF data
 - **Validator API**: Perform data quality checks
 
+### Comprehensive Parameter Descriptions
+
+Every tool parameter includes:
+- **Detailed explanations** of purpose and usage
+- **Real-world examples** with actual GBIF data (e.g., "Example: 212 for family Felidae")
+- **Valid value lists** for enums with human-readable descriptions
+- **Range constraints** and data type information
+- **Links to GBIF API documentation** for additional reference
+
+This makes it easy for AI assistants to construct accurate queries without guessing parameter formats.
+
 ## Installation
+
+### From Source
 
 ```bash
 # Clone the repository
@@ -47,32 +88,278 @@ npm install
 npm run build
 ```
 
+### From NPM (when published)
+
+```bash
+npm install -g gbif-mcp
+```
+
 ## Configuration
 
-Add this server to your MCP settings configuration file:
+### Option 1: Claude Desktop App
 
-**For Claude Desktop:**
+Add the server to your Claude Desktop configuration file:
+
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
     "gbif": {
       "command": "node",
-      "args": ["/path/to/gbif-mcp/build/index.js"]
+      "args": ["/ABSOLUTE/PATH/TO/gbif-mcp/build/index.js"],
+      "env": {
+        "GBIF_USERNAME": "your-username",
+        "GBIF_PASSWORD": "your-password"
+      }
     }
   }
 }
 ```
 
+**Important**: Replace `/ABSOLUTE/PATH/TO` with the full path to your cloned repository.
+
+**Example** (macOS):
+```json
+{
+  "mcpServers": {
+    "gbif": {
+      "command": "node",
+      "args": ["/Users/yourname/projects/gbif-mcp/build/index.js"]
+    }
+  }
+}
+```
+
+**Example** (Windows):
+```json
+{
+  "mcpServers": {
+    "gbif": {
+      "command": "node",
+      "args": ["C:\\Users\\YourName\\projects\\gbif-mcp\\build\\index.js"]
+    }
+  }
+}
+```
+
+After updating the configuration:
+1. Save the file
+2. Restart Claude Desktop
+3. Look for the 🔌 icon to verify the MCP server is connected
+
+### Option 2: Claude Code CLI
+
+If you're using [Claude Code](https://docs.claude.com/claude-code), you can add the MCP server using the CLI:
+
+```bash
+# Navigate to your gbif-mcp directory
+cd /path/to/gbif-mcp
+
+# Add the MCP server
+claude mcp add gbif node build/index.js
+
+# Or with environment variables for authenticated endpoints
+claude mcp add gbif node build/index.js --env GBIF_USERNAME=your-username --env GBIF_PASSWORD=your-password
+```
+
+Verify the installation:
+```bash
+# List all MCP servers
+claude mcp list
+
+# Test the connection
+claude mcp test gbif
+```
+
+### Option 3: Other MCP Clients
+
+For other MCP-compatible clients (Codex, Gemini CLI, etc.), add the server to the client's configuration file following their MCP server setup documentation:
+
+**General MCP Configuration Format**:
+```json
+{
+  "mcpServers": {
+    "gbif": {
+      "command": "node",
+      "args": ["/absolute/path/to/gbif-mcp/build/index.js"],
+      "env": {
+        "GBIF_USERNAME": "optional-username",
+        "GBIF_PASSWORD": "optional-password"
+      }
+    }
+  }
+}
+```
+
+### Environment Variables
+
+Create a `.env` file in the project root for local development (optional):
+
+```bash
+# GBIF API Credentials (optional - only needed for downloads and authenticated endpoints)
+GBIF_USERNAME=your-gbif-username
+GBIF_PASSWORD=your-gbif-password
+
+# GBIF API Configuration (optional - defaults shown)
+GBIF_BASE_URL=https://api.gbif.org/v1
+GBIF_USER_AGENT=GBIF-MCP-Server/1.0.0
+GBIF_TIMEOUT=30000
+
+# Rate Limiting (optional - defaults shown)
+RATE_LIMIT_MAX_REQUESTS=100
+RATE_LIMIT_CONCURRENT=10
+
+# Caching (optional - defaults shown)
+CACHE_ENABLED=true
+CACHE_MAX_SIZE=100
+CACHE_TTL=3600000
+
+# Logging (optional - defaults shown)
+LOG_LEVEL=info
+LOG_FORMAT=json
+```
+
+**Note**: Most GBIF API endpoints do not require authentication. Credentials are only needed for:
+- Requesting occurrence downloads
+- Accessing private datasets
+- Publishing data (not currently implemented)
+
+## Verifying Installation
+
+After configuration, verify the server is working:
+
+### In Claude Desktop:
+1. Open Claude Desktop
+2. Look for the 🔌 MCP icon in the interface
+3. Try a query: "Search GBIF for Panthera leo occurrences in Kenya"
+
+### In Claude Code CLI:
+```bash
+# List available tools
+claude mcp tools gbif
+
+# Test a simple query
+claude chat "Use the gbif MCP server to search for Panthera leo"
+```
+
+### Manual Test (stdio):
+```bash
+# Build and test the server directly
+npm run build
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | node build/index.js
+```
+
+## Available Tools
+
+The server provides the following MCP tools for interacting with GBIF data:
+
+### Species Tools
+- `gbif_species_search` - Search for species with advanced filtering
+- `gbif_species_get` - Get detailed information about a specific species
+- `gbif_species_suggest` - Get species name suggestions for autocomplete
+- `gbif_species_match` - Fuzzy match a species name against GBIF taxonomy
+- `gbif_species_children` - Get direct taxonomic children of a taxon
+- `gbif_species_parents` - Get complete taxonomic classification path
+- `gbif_species_synonyms` - Get synonyms and alternative names
+- `gbif_species_vernacular_names` - Get common names in multiple languages
+- `gbif_species_descriptions` - Get textual descriptions of species
+- `gbif_species_distributions` - Get geographic distribution information
+- `gbif_species_media` - Get images, sounds, and videos
+
+### Occurrence Tools
+- `gbif_occurrence_search` - Search occurrence records with 40+ filter parameters
+- `gbif_occurrence_get` - Get complete details for a single occurrence
+- `gbif_occurrence_count` - Fast counting without retrieving full records
+- `gbif_occurrence_verbatim` - Get original unprocessed occurrence data
+- `gbif_occurrence_download_request` - Request large dataset downloads (requires auth)
+- `gbif_occurrence_download_status` - Check download status
+- `gbif_occurrence_download_predicate_builder` - Build download filters
+
+All tools include comprehensive parameter descriptions with examples. Use `claude mcp tools gbif` to see the full list.
+
 ## Usage Examples
 
 Once configured, you can use the MCP server through your AI assistant:
 
+### Species Queries
 - "Search for occurrence records of Panthera tigris in India"
 - "Find taxonomic information for the species Quercus robur"
+- "What are the common names for Apis mellifera in different languages?"
+- "Show me the complete taxonomic classification for the African lion"
+- "Find all synonyms for the scientific name Felis leo"
+
+### Occurrence Queries
+- "How many bird observations were recorded in California in 2023?"
+- "Find preserved specimens of orchids collected before 1900"
+- "Show me occurrence records with photos from National Parks"
+- "Search for endangered species observations in Brazil"
+
+### Data Management
 - "List datasets published by the Natural History Museum"
 - "Show me recent papers citing GBIF data about pollinators"
 - "Validate this biodiversity dataset before publication"
+
+## Troubleshooting
+
+### Server Not Connecting
+
+**Claude Desktop:**
+1. Check the configuration file path is correct
+2. Verify you're using absolute paths (not relative paths like `~/` or `./`)
+3. Ensure the build directory exists: `ls /path/to/gbif-mcp/build/index.js`
+4. Check Claude Desktop logs:
+   - macOS: `~/Library/Logs/Claude/`
+   - Windows: `%APPDATA%\Claude\logs\`
+
+**Claude Code CLI:**
+```bash
+# Check server status
+claude mcp status gbif
+
+# View logs
+claude mcp logs gbif
+
+# Remove and re-add
+claude mcp remove gbif
+claude mcp add gbif node /absolute/path/to/gbif-mcp/build/index.js
+```
+
+### Build Errors
+
+```bash
+# Clean and rebuild
+rm -rf build node_modules
+npm install
+npm run build
+
+# Check for TypeScript errors
+npm run build -- --noEmit
+```
+
+### Authentication Issues
+
+If you're getting 401 errors for downloads:
+1. Verify your GBIF credentials at [GBIF.org](https://www.gbif.org/user/profile)
+2. Check environment variables are set correctly
+3. Create a `.env` file in the project root with your credentials
+4. Note: Most endpoints don't require authentication - only downloads do
+
+### Rate Limiting
+
+If you're being rate limited:
+1. Reduce query frequency
+2. Use the count endpoint before large searches
+3. Consider caching results
+4. Use occurrence downloads for large datasets instead of pagination
+
+### Node.js Version
+
+Ensure you're using Node.js 18 or higher:
+```bash
+node --version  # Should be v18.0.0 or higher
+```
 
 ## API Coverage
 
