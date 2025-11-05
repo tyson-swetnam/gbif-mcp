@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  gbif-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gbif-mcp:latest
+    container_name: gbif-mcp-server
+
+    # Environment variables for GBIF API
+    environment:
+      # GBIF API Configuration (optional - defaults shown)
+      - GBIF_BASE_URL=https://api.gbif.org/v1
+      - GBIF_USER_AGENT=GBIF-MCP-Server/1.0.0
+      - GBIF_TIMEOUT=30000
+
+      # GBIF Credentials (optional - only needed for downloads)
+      # Uncomment and set your credentials if needed
+      # - GBIF_USERNAME=${GBIF_USERNAME}
+      # - GBIF_PASSWORD=${GBIF_PASSWORD}
+
+      # Rate Limiting (optional - defaults shown)
+      - RATE_LIMIT_MAX_REQUESTS=100
+      - RATE_LIMIT_CONCURRENT=10
+
+      # Caching (optional - defaults shown)
+      - CACHE_ENABLED=true
+      - CACHE_MAX_SIZE=100
+      - CACHE_TTL=3600000
+
+      # Logging (optional - defaults shown)
+      - LOG_LEVEL=info
+      - LOG_FORMAT=json
+      - LOG_MASK_SENSITIVE=true
+
+    # Use host network for stdio communication
+    # MCP servers use stdio for communication, not network ports
+    network_mode: none
+
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+
+    # Read-only root filesystem for security
+    read_only: true
+
+    # Temporary filesystem for any needed writes
+    tmpfs:
+      - /tmp
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "-e", "console.log('healthy')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+# Optional: For future HTTP/WebSocket MCP transport
+# Uncomment this service if you want to run MCP over HTTP
+#
+# gbif-mcp-http:
+#   build:
+#     context: .
+#     dockerfile: Dockerfile
+#   image: gbif-mcp:latest
+#   container_name: gbif-mcp-http-server
+#   ports:
+#     - "3000:3000"
+#   environment:
+#     - MCP_TRANSPORT=http
+#     - MCP_PORT=3000
+#   restart: unless-stopped

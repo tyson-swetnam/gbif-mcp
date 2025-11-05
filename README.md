@@ -94,6 +94,22 @@ npm run build
 npm install -g gbif-mcp
 ```
 
+### Using Docker
+
+```bash
+# Clone the repository
+git clone https://github.com/tyson-swetnam/gbif-mcp.git
+cd gbif-mcp
+
+# Build the Docker image
+docker build -t gbif-mcp:latest .
+
+# Or use Docker Compose
+docker-compose build
+```
+
+The Docker image uses a multi-stage build with Alpine Linux for a small footprint (~150MB).
+
 ## Configuration
 
 ### Option 1: Claude Desktop App
@@ -173,7 +189,140 @@ claude mcp list
 claude mcp test gbif
 ```
 
-### Option 3: Other MCP Clients
+### Option 3: Docker Container
+
+Run the MCP server in a Docker container for isolated, reproducible deployments:
+
+#### Quick Start with Docker
+
+```bash
+# Build the image
+docker build -t gbif-mcp:latest .
+
+# Run the container (stdio mode for MCP)
+docker run -i gbif-mcp:latest
+```
+
+#### Claude Desktop with Docker
+
+Update your Claude Desktop configuration to use the Docker container:
+
+**macOS/Linux**:
+```json
+{
+  "mcpServers": {
+    "gbif": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e", "GBIF_USERNAME=your-username",
+        "-e", "GBIF_PASSWORD=your-password",
+        "gbif-mcp:latest"
+      ]
+    }
+  }
+}
+```
+
+**Windows**:
+```json
+{
+  "mcpServers": {
+    "gbif": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e", "GBIF_USERNAME=your-username",
+        "-e", "GBIF_PASSWORD=your-password",
+        "gbif-mcp:latest"
+      ]
+    }
+  }
+}
+```
+
+#### Claude Code CLI with Docker
+
+```bash
+# Add the Docker-based MCP server
+claude mcp add gbif docker run -i --rm gbif-mcp:latest
+
+# With environment variables
+claude mcp add gbif docker run -i --rm \
+  -e GBIF_USERNAME=your-username \
+  -e GBIF_PASSWORD=your-password \
+  gbif-mcp:latest
+```
+
+#### Docker Compose
+
+For easier management, use Docker Compose:
+
+```bash
+# Start the service
+docker-compose up -d gbif-mcp
+
+# View logs
+docker-compose logs -f gbif-mcp
+
+# Stop the service
+docker-compose down
+```
+
+Edit `docker-compose.yml` to configure environment variables:
+
+```yaml
+environment:
+  - GBIF_USERNAME=${GBIF_USERNAME}
+  - GBIF_PASSWORD=${GBIF_PASSWORD}
+  - LOG_LEVEL=debug  # Change log level
+```
+
+Then use in Claude Desktop config:
+
+```json
+{
+  "mcpServers": {
+    "gbif": {
+      "command": "docker",
+      "args": ["compose", "run", "--rm", "gbif-mcp"]
+    }
+  }
+}
+```
+
+#### Docker Environment Variables
+
+Pass environment variables to the Docker container:
+
+```bash
+# Using -e flags
+docker run -i --rm \
+  -e GBIF_USERNAME=myusername \
+  -e GBIF_PASSWORD=mypassword \
+  -e LOG_LEVEL=debug \
+  -e CACHE_ENABLED=true \
+  gbif-mcp:latest
+
+# Using an env file
+echo "GBIF_USERNAME=myusername" > .env.docker
+echo "GBIF_PASSWORD=mypassword" >> .env.docker
+docker run -i --rm --env-file .env.docker gbif-mcp:latest
+```
+
+#### Docker Image Details
+
+- **Base Image**: Node.js 20 Alpine Linux
+- **Size**: ~150MB (multi-stage build)
+- **User**: Runs as non-root user (uid 1001)
+- **Security**: Read-only root filesystem, no new privileges
+- **Health Check**: Built-in health monitoring
+
+### Option 4: Other MCP Clients
 
 For other MCP-compatible clients (Codex, Gemini CLI, etc.), add the server to the client's configuration file following their MCP server setup documentation:
 
@@ -337,6 +486,55 @@ npm run build
 # Check for TypeScript errors
 npm run build -- --noEmit
 ```
+
+### Docker Issues
+
+**Image Build Fails:**
+```bash
+# Clean Docker cache and rebuild
+docker system prune -a
+docker build --no-cache -t gbif-mcp:latest .
+
+# Check Docker version (requires 20.10+)
+docker --version
+```
+
+**Container Won't Start:**
+```bash
+# Check container logs
+docker logs <container-id>
+
+# Run with debug logging
+docker run -i --rm -e LOG_LEVEL=debug gbif-mcp:latest
+
+# Test container health
+docker run --rm gbif-mcp:latest node -e "console.log('test')"
+```
+
+**Permission Issues:**
+```bash
+# Ensure Docker daemon is running
+docker ps
+
+# Check if user has Docker permissions (Linux)
+sudo usermod -aG docker $USER
+# Log out and back in for group changes to take effect
+```
+
+**Environment Variables Not Working:**
+```bash
+# Verify environment variables are passed
+docker run -i --rm gbif-mcp:latest node -e "console.log(process.env.GBIF_USERNAME)"
+
+# Use --env-file for multiple variables
+docker run -i --rm --env-file .env.docker gbif-mcp:latest
+```
+
+**MCP Communication Issues with Docker:**
+- Ensure you're using `-i` (interactive) flag for stdio communication
+- Use `--rm` to automatically remove containers after execution
+- Don't use `-d` (detached) mode - MCP needs stdio connection
+- Check that the command in your MCP config exactly matches: `docker run -i --rm gbif-mcp:latest`
 
 ### Authentication Issues
 
