@@ -1,6 +1,7 @@
 export { RegistrySearchDatasetsTool } from './registry-search-datasets.tool.js';
 export { RegistryGetDatasetTool } from './registry-get-dataset.tool.js';
 export { RegistryDatasetMetricsTool } from './registry-dataset-metrics.tool.js';
+export { RegistryDatasetDocumentTool } from './registry-dataset-document.tool.js';
 export { RegistrySearchOrganizationsTool } from './registry-search-organizations.tool.js';
 export { RegistryGetOrganizationTool } from './registry-get-organization.tool.js';
 export { RegistryOrganizationDatasetsTool } from './registry-organization-datasets.tool.js';
@@ -13,3 +14,5 @@ export { RegistrySearchCollectionsTool } from './registry-search-collections.too
 export { RegistryGetCollectionTool } from './registry-get-collection.tool.js';
 export { RegistrySearchInstitutionsTool } from './registry-search-institutions.tool.js';
 export { RegistryGetInstitutionTool } from './registry-get-institution.tool.js';
+export { RegistryListNodesTool } from './registry-list-nodes.tool.js';
+export { RegistryGetNodeTool } from './registry-get-node.tool.js';

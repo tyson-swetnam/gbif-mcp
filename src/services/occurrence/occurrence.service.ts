@@ -593,10 +593,82 @@ export class OccurrenceService {
   }
 
   /**
+   * Get occurrence counts by publishing country
+   */
+  async getCountsByPublishingCountry(params: OccurrenceSearchParams = {}): Promise<Record<string, number>> {
+    try {
+      logger.info('Getting occurrence counts by publishing country', { params });
+
+      const searchParams = this.sanitizeSearchParams(params);
+      const response = await this.client.get<Record<string, number>>(
+        `${this.basePath}/counts/publishingCountries`,
+        searchParams
+      );
+
+      logger.info('Publishing country counts retrieved', {
+        publishingCountries: Object.keys(response).length,
+      });
+
+      return response;
+    } catch (error) {
+      logger.error('Failed to get counts by publishing country', { params, error });
+      throw this.handleError(error, 'Failed to get occurrence counts by publishing country');
+    }
+  }
+
+  /**
+   * Get occurrence counts by dataset
+   */
+  async getCountsByDataset(params: OccurrenceSearchParams = {}): Promise<Record<string, number>> {
+    try {
+      logger.info('Getting occurrence counts by dataset', { params });
+
+      const searchParams = this.sanitizeSearchParams(params);
+      const response = await this.client.get<Record<string, number>>(
+        `${this.basePath}/counts/datasets`,
+        searchParams
+      );
+
+      logger.info('Dataset counts retrieved', {
+        datasets: Object.keys(response).length,
+      });
+
+      return response;
+    } catch (error) {
+      logger.error('Failed to get counts by dataset', { params, error });
+      throw this.handleError(error, 'Failed to get occurrence counts by dataset');
+    }
+  }
+
+  /**
    * Validate occurrence key
    */
   private isValidKey(key: number): boolean {
     return Number.isInteger(key) && key > 0;
+  }
+
+  /**
+   * Get occurrence counts by taxon key
+   */
+  async getCountsByTaxon(params: OccurrenceSearchParams = {}): Promise<Record<string, number>> {
+    try {
+      logger.info('Getting occurrence counts by taxon', { params });
+
+      const searchParams = this.sanitizeSearchParams(params);
+      const response = await this.client.get<Record<string, number>>(
+        `${this.basePath}/counts/taxonKeys`,
+        searchParams
+      );
+
+      logger.info('Taxon counts retrieved', {
+        taxa: Object.keys(response).length,
+      });
+
+      return response;
+    } catch (error) {
+      logger.error('Failed to get counts by taxon', { params, error });
+      throw this.handleError(error, 'Failed to get occurrence counts by taxon');
+    }
   }
 
   /**

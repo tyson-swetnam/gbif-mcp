@@ -13,3 +13,6 @@ export { OccurrenceVerbatimTool } from './occurrence-verbatim.tool.js';
 export { OccurrenceCountsByBasisOfRecordTool } from './occurrence-counts-basis-of-record.tool.js';
 export { OccurrenceCountsByYearTool } from './occurrence-counts-by-year.tool.js';
 export { OccurrenceCountsByCountryTool } from './occurrence-counts-by-country.tool.js';
+export { OccurrenceCountsByPublishingCountryTool } from './occurrence-counts-by-publishing-country.tool.js';
+export { OccurrenceCountsByDatasetTool } from './occurrence-counts-by-dataset.tool.js';
+export { OccurrenceCountsByTaxonTool } from './occurrence-counts-by-taxon.tool.js';

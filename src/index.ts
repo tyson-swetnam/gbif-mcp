@@ -44,6 +44,7 @@ import {
   SpeciesMediaTool,
   SpeciesMetricsTool,
   SpeciesParseNamesTool,
+  SpeciesRelatedTool,
 } from './tools/species/index.js';
 
 // Import occurrence tools
@@ -58,6 +59,9 @@ import {
   OccurrenceCountsByBasisOfRecordTool,
   OccurrenceCountsByYearTool,
   OccurrenceCountsByCountryTool,
+  OccurrenceCountsByPublishingCountryTool,
+  OccurrenceCountsByDatasetTool,
+  OccurrenceCountsByTaxonTool,
 } from './tools/occurrence/index.js';
 
 // Import registry tools
@@ -65,6 +69,7 @@ import {
   RegistrySearchDatasetsTool,
   RegistryGetDatasetTool,
   RegistryDatasetMetricsTool,
+  RegistryDatasetDocumentTool,
   RegistrySearchOrganizationsTool,
   RegistryGetOrganizationTool,
   RegistryOrganizationDatasetsTool,
@@ -77,6 +82,8 @@ import {
   RegistryGetCollectionTool,
   RegistrySearchInstitutionsTool,
   RegistryGetInstitutionTool,
+  RegistryListNodesTool,
+  RegistryGetNodeTool,
 } from './tools/registry/index.js';
 
 // Import maps tools
@@ -197,6 +204,7 @@ class GBIFMCPServer {
       this.toolRegistry.register(new SpeciesMediaTool(speciesService));
       this.toolRegistry.register(new SpeciesMetricsTool(speciesService));
       this.toolRegistry.register(new SpeciesParseNamesTool(speciesService));
+      this.toolRegistry.register(new SpeciesRelatedTool(speciesService));
 
       // Register all occurrence tools
       this.toolRegistry.register(new OccurrenceSearchTool(occurrenceService));
@@ -209,11 +217,15 @@ class GBIFMCPServer {
       this.toolRegistry.register(new OccurrenceCountsByBasisOfRecordTool(occurrenceService));
       this.toolRegistry.register(new OccurrenceCountsByYearTool(occurrenceService));
       this.toolRegistry.register(new OccurrenceCountsByCountryTool(occurrenceService));
+      this.toolRegistry.register(new OccurrenceCountsByPublishingCountryTool(occurrenceService));
+      this.toolRegistry.register(new OccurrenceCountsByDatasetTool(occurrenceService));
+      this.toolRegistry.register(new OccurrenceCountsByTaxonTool(occurrenceService));
 
       // Register all registry tools
       this.toolRegistry.register(new RegistrySearchDatasetsTool(registryService));
       this.toolRegistry.register(new RegistryGetDatasetTool(registryService));
       this.toolRegistry.register(new RegistryDatasetMetricsTool(registryService));
+      this.toolRegistry.register(new RegistryDatasetDocumentTool(registryService));
       this.toolRegistry.register(new RegistrySearchOrganizationsTool(registryService));
       this.toolRegistry.register(new RegistryGetOrganizationTool(registryService));
       this.toolRegistry.register(new RegistryOrganizationDatasetsTool(registryService));
@@ -226,6 +238,8 @@ class GBIFMCPServer {
       this.toolRegistry.register(new RegistryGetCollectionTool(registryService));
       this.toolRegistry.register(new RegistrySearchInstitutionsTool(registryService));
       this.toolRegistry.register(new RegistryGetInstitutionTool(registryService));
+      this.toolRegistry.register(new RegistryListNodesTool(registryService));
+      this.toolRegistry.register(new RegistryGetNodeTool(registryService));
 
       // Register all maps tools
       this.toolRegistry.register(new MapsGetTileUrlTool(mapsService));
@@ -249,9 +263,9 @@ class GBIFMCPServer {
       const tools = this.toolRegistry.getAll();
       logger.info('Services initialized successfully', {
         toolCount: tools.length,
-        speciesTools: 13,
-        occurrenceTools: 10,
-        registryTools: 15,
+        speciesTools: 14,
+        occurrenceTools: 13,
+        registryTools: 17,
         mapsTools: 4,
         literatureTools: 2,
         vocabulariesTools: 3,

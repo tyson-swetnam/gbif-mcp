@@ -633,6 +633,40 @@ export class SpeciesService {
   }
 
   /**
+   * Get related species (siblings and related taxa)
+   */
+  async getRelated(key: number, options: { limit?: number; offset?: number } = {}): Promise<GBIFResponse<Species>> {
+    try {
+      logger.info('Getting related species', { key, options });
+
+      if (!this.isValidKey(key)) {
+        throw new Error('Invalid species key');
+      }
+
+      const params = {
+        limit: options.limit || 20,
+        offset: options.offset || 0,
+      };
+
+      const response = await this.client.get<GBIFResponse<Species>>(
+        `${this.basePath}/${key}/related`,
+        params
+      );
+
+      logger.info('Related species retrieved', {
+        key,
+        count: response.results?.length || 0,
+        totalCount: response.count,
+      });
+
+      return response;
+    } catch (error) {
+      logger.error('Failed to get related species', { key, options, error });
+      throw this.handleError(error, 'Failed to get related species');
+    }
+  }
+
+  /**
    * Validate taxon key
    */
   private isValidKey(key: number): boolean {

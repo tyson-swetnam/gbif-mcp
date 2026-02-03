@@ -147,6 +147,28 @@ export class RegistryService {
   }
 
   /**
+   * Get dataset EML document
+   */
+  async getDatasetDocument(key: string): Promise<string> {
+    try {
+      logger.info('Fetching dataset EML document', { key });
+
+      if (!this.isValidUUID(key)) {
+        throw new Error('Invalid dataset key: must be a valid UUID');
+      }
+
+      const document = await this.client.get<string>(`${this.datasetPath}/${key}/document`);
+
+      logger.info('Dataset EML document retrieved', { key });
+
+      return document;
+    } catch (error) {
+      logger.error('Failed to get dataset document', { key, error });
+      throw this.handleError(error, `Failed to get EML document for dataset ${key}`);
+    }
+  }
+
+  /**
    * Search organizations
    *
    * Search data publishers and hosting organizations. Organizations are
@@ -614,6 +636,53 @@ export class RegistryService {
     } catch (error) {
       logger.error('Failed to get institution', { key, error });
       throw this.handleError(error, `Failed to get institution with key ${key}`);
+    }
+  }
+
+  /**
+   * List GBIF nodes
+   */
+  async listNodes(params: any = {}): Promise<GBIFResponse<any>> {
+    try {
+      logger.info('Listing GBIF nodes', { params });
+
+      const response = await this.client.get<GBIFResponse<any>>('/node', params);
+
+      logger.info('Nodes listed successfully', {
+        resultCount: response.results?.length || 0,
+        totalCount: response.count,
+      });
+
+      return response;
+    } catch (error) {
+      logger.error('Failed to list nodes', { params, error });
+      throw this.handleError(error, 'Failed to list GBIF nodes');
+    }
+  }
+
+  /**
+   * Get node by key
+   */
+  async getNode(key: string): Promise<any> {
+    try {
+      logger.info('Fetching node by key', { key });
+
+      if (!this.isValidUUID(key)) {
+        throw new Error('Invalid node key: must be a valid UUID');
+      }
+
+      const node = await this.client.get<any>(`/node/${key}`);
+
+      logger.info('Node retrieved successfully', {
+        key,
+        title: node.title,
+        country: node.country,
+      });
+
+      return node;
+    } catch (error) {
+      logger.error('Failed to get node', { key, error });
+      throw this.handleError(error, `Failed to get node with key ${key}`);
     }
   }
 

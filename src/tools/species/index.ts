@@ -14,3 +14,4 @@ export { SpeciesDistributionsTool } from './species-distributions.tool.js';
 export { SpeciesMediaTool } from './species-media.tool.js';
 export { SpeciesMetricsTool } from './species-metrics.tool.js';
 export { SpeciesParseNamesTool } from './species-parse-names.tool.js';
+export { SpeciesRelatedTool } from './species-related.tool.js';
