@@ -672,6 +672,30 @@ export class OccurrenceService {
   }
 
   /**
+   * Get occurrence counts by publishing organization
+   */
+  async getCountsByPublishingOrg(params: OccurrenceSearchParams = {}): Promise<Record<string, number>> {
+    try {
+      logger.info('Getting occurrence counts by publishing organization', { params });
+
+      const searchParams = this.sanitizeSearchParams(params);
+      const response = await this.client.get<Record<string, number>>(
+        `${this.basePath}/counts/publishingOrganizations`,
+        searchParams
+      );
+
+      logger.info('Publishing organization counts retrieved', {
+        organizations: Object.keys(response).length,
+      });
+
+      return response;
+    } catch (error) {
+      logger.error('Failed to get counts by publishing organization', { params, error });
+      throw this.handleError(error, 'Failed to get occurrence counts by publishing organization');
+    }
+  }
+
+  /**
    * Handle and transform errors
    */
   private handleError(error: any, message: string): Error {

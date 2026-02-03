@@ -62,6 +62,7 @@ import {
   OccurrenceCountsByPublishingCountryTool,
   OccurrenceCountsByDatasetTool,
   OccurrenceCountsByTaxonTool,
+  OccurrenceCountsByPublishingOrgTool,
 } from './tools/occurrence/index.js';
 
 // Import registry tools
@@ -111,6 +112,7 @@ import {
 import {
   ValidatorValidateDwcaTool,
   ValidatorGetStatusTool,
+  ValidatorValidateTabularTool,
 } from './tools/validator/index.js';
 
 /**
@@ -220,6 +222,7 @@ class GBIFMCPServer {
       this.toolRegistry.register(new OccurrenceCountsByPublishingCountryTool(occurrenceService));
       this.toolRegistry.register(new OccurrenceCountsByDatasetTool(occurrenceService));
       this.toolRegistry.register(new OccurrenceCountsByTaxonTool(occurrenceService));
+      this.toolRegistry.register(new OccurrenceCountsByPublishingOrgTool(occurrenceService));
 
       // Register all registry tools
       this.toolRegistry.register(new RegistrySearchDatasetsTool(registryService));
@@ -259,17 +262,18 @@ class GBIFMCPServer {
       // Register all validator tools
       this.toolRegistry.register(new ValidatorValidateDwcaTool(validatorService));
       this.toolRegistry.register(new ValidatorGetStatusTool(validatorService));
+      this.toolRegistry.register(new ValidatorValidateTabularTool(validatorService));
 
       const tools = this.toolRegistry.getAll();
       logger.info('Services initialized successfully', {
         toolCount: tools.length,
         speciesTools: 14,
-        occurrenceTools: 13,
+        occurrenceTools: 14,
         registryTools: 17,
         mapsTools: 4,
         literatureTools: 2,
         vocabulariesTools: 3,
-        validatorTools: 2,
+        validatorTools: 3,
         tools: tools.map(t => t.getDefinition().name),
       });
     } catch (error) {

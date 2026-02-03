@@ -16,3 +16,4 @@ export { OccurrenceCountsByCountryTool } from './occurrence-counts-by-country.to
 export { OccurrenceCountsByPublishingCountryTool } from './occurrence-counts-by-publishing-country.tool.js';
 export { OccurrenceCountsByDatasetTool } from './occurrence-counts-by-dataset.tool.js';
 export { OccurrenceCountsByTaxonTool } from './occurrence-counts-by-taxon.tool.js';
+export { OccurrenceCountsByPublishingOrgTool } from './occurrence-counts-by-publishing-org.tool.js';
