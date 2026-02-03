@@ -54,8 +54,8 @@ describe('LiteratureService', () => {
     }, 15000);
   });
 
-  describe('get', () => {
-    it('should get literature by ID', async () => {
+  describe('getByDoi', () => {
+    it('should get literature by DOI', async () => {
       const mockLiterature = {
         id: 123,
         title: 'Biodiversity Study',
@@ -64,12 +64,13 @@ describe('LiteratureService', () => {
       };
 
       server.use(
-        http.get('http://localhost:3000/literature/123', () => {
+        http.get('http://localhost:3000/literature/:doi', ({ params }) => {
+          // Match any DOI pattern
           return HttpResponse.json(mockLiterature);
         })
       );
 
-      const result = await service.get(123);
+      const result = await service.getByDoi('10.1234/test');
       expect(result.title).toBe('Biodiversity Study');
     });
   });

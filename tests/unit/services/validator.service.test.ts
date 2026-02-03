@@ -13,7 +13,7 @@ describe('ValidatorService', () => {
     service = new ValidatorService(client);
   });
 
-  describe('validateDwcArchive', () => {
+  describe('validateDwca', () => {
     it('should validate DwC-A from URL', async () => {
       const mockResult = {
         valid: true,
@@ -22,44 +22,42 @@ describe('ValidatorService', () => {
       };
 
       server.use(
-        http.post('http://localhost:3000/validator/jobserver/submit', () => {
+        http.post('http://localhost:3000/validator/dwca', () => {
           return HttpResponse.json(mockResult);
         })
       );
 
-      const result = await service.validateDwcArchive('https://example.com/archive.zip');
+      const result = await service.validateDwca('https://example.com/archive.zip');
       expect(result.valid).toBe(true);
     });
 
     it('should handle validation errors', async () => {
       server.use(
-        http.post('http://localhost:3000/validator/jobserver/submit', () => {
+        http.post('http://localhost:3000/validator/dwca', () => {
           return HttpResponse.json({ error: 'Invalid URL' }, { status: 400 });
         })
       );
 
-      await expect(service.validateDwcArchive('invalid-url')).rejects.toThrow();
+      await expect(service.validateDwca('invalid-url')).rejects.toThrow();
     });
   });
 
-  describe('getValidationStatus', () => {
+  describe('getStatus', () => {
     it('should get validation job status', async () => {
       const mockStatus = {
-        jobId: 'job-123',
+        key: 'job-123',
         status: 'FINISHED',
-        result: {
-          valid: true,
-          issues: [],
-        },
+        valid: true,
+        issues: [],
       };
 
       server.use(
-        http.get('http://localhost:3000/validator/jobserver/job/job-123', () => {
+        http.get('http://localhost:3000/validator/status/job-123', () => {
           return HttpResponse.json(mockStatus);
         })
       );
 
-      const result = await service.getValidationStatus('job-123');
+      const result = await service.getStatus('job-123');
       expect(result.status).toBe('FINISHED');
     });
   });

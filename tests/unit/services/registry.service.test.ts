@@ -31,7 +31,7 @@ describe('RegistryService', () => {
       };
 
       server.use(
-        http.get('http://localhost:3000/dataset', () => {
+        http.get('http://localhost:3000/dataset/search', () => {
           return HttpResponse.json(mockResponse);
         })
       );
@@ -55,20 +55,21 @@ describe('RegistryService', () => {
 
   describe('getDataset', () => {
     it('should get dataset by key', async () => {
+      const datasetKey = '50c9509d-22c7-4a22-a47d-8c48425ef4a7';
       const mockDataset = {
-        key: 'dataset-123',
+        key: datasetKey,
         title: 'Test Dataset',
         description: 'A test dataset',
         type: 'OCCURRENCE',
       };
 
       server.use(
-        http.get('http://localhost:3000/dataset/dataset-123', () => {
+        http.get(`http://localhost:3000/dataset/${datasetKey}`, () => {
           return HttpResponse.json(mockDataset);
         })
       );
 
-      const result = await service.getDataset('dataset-123');
+      const result = await service.getDataset(datasetKey);
       expect(result.title).toBe('Test Dataset');
     });
   });
@@ -90,7 +91,7 @@ describe('RegistryService', () => {
       };
 
       server.use(
-        http.get('http://localhost:3000/organization', () => {
+        http.get('http://localhost:3000/organization/search', () => {
           return HttpResponse.json(mockResponse);
         })
       );
@@ -116,7 +117,7 @@ describe('RegistryService', () => {
       };
 
       server.use(
-        http.get('http://localhost:3000/network', () => {
+        http.get('http://localhost:3000/network/search', () => {
           return HttpResponse.json(mockResponse);
         })
       );

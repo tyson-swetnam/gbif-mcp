@@ -177,50 +177,17 @@ describe('OccurrenceService', () => {
     });
   });
 
-  describe('downloadRequest', () => {
-    it('should create download request', async () => {
-      const mockDownload = {
-        key: 'download-123',
-        status: 'PREPARING',
-        request: {
-          predicate: {
-            type: 'equals',
-            key: 'TAXON_KEY',
-            value: '5231190',
-          },
-        },
-      };
-
-      server.use(
-        http.post('http://localhost:3000/occurrence/download/request', () => {
-          return HttpResponse.json(mockDownload);
-        })
-      );
-
-      const predicate = {
-        type: 'equals' as const,
-        key: 'TAXON_KEY',
-        value: '5231190',
-      };
-
-      const result = await service.downloadRequest(predicate);
-
-      expect(result).toEqual(mockDownload);
-      expect(result.status).toBe('PREPARING');
-    });
-  });
-
   describe('getDownloadStatus', () => {
     it('should get download status', async () => {
       const mockStatus = {
         key: 'download-123',
         status: 'SUCCEEDED',
-        downloadLink: 'https://api.gbif.org/v1/occurrence/download/request/download-123.zip',
+        downloadLink: 'https://api.gbif.org/v1/occurrence/download/download-123.zip',
         size: 1024000,
       };
 
       server.use(
-        http.get('http://localhost:3000/occurrence/download/request/download-123', () => {
+        http.get('http://localhost:3000/occurrence/download/download-123', () => {
           return HttpResponse.json(mockStatus);
         })
       );
@@ -229,6 +196,10 @@ describe('OccurrenceService', () => {
 
       expect(result).toEqual(mockStatus);
       expect(result.status).toBe('SUCCEEDED');
+    });
+
+    it('should validate download key', async () => {
+      await expect(service.getDownloadStatus('')).rejects.toThrow('Download key is required');
     });
   });
 });

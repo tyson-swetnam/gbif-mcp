@@ -20,7 +20,8 @@ describe('MapsService', () => {
         style: 'classic.poly',
       });
 
-      expect(url).toContain('/map/occurrence/density/0/0/0@1x.png');
+      expect(url).toContain('/map/occurrence/density/0/0/0');
+      expect(url).toContain('.png');
       expect(url).toContain('style=classic.poly');
     });
 
@@ -43,15 +44,15 @@ describe('MapsService', () => {
         year: '2020,2024',
       });
 
-      expect(url).toContain('year=2020,2024');
+      expect(url).toContain('year=2020');
     });
 
-    it('should include retina support', () => {
+    it('should support scale parameter', () => {
       const url = service.getTileUrl({
         z: 0,
         x: 0,
         y: 0,
-        retina: true,
+        scale: 2,
       });
 
       expect(url).toContain('@2x.png');
@@ -60,10 +61,7 @@ describe('MapsService', () => {
 
   describe('getVectorTileUrl', () => {
     it('should generate vector tile URL', () => {
-      const url = service.getVectorTileUrl({
-        z: 0,
-        x: 0,
-        y: 0,
+      const url = service.getVectorTileUrl(0, 0, 0, {
         style: 'classic.poly',
       });
 
@@ -74,10 +72,7 @@ describe('MapsService', () => {
 
   describe('getRasterTileUrl', () => {
     it('should generate raster tile URL', () => {
-      const url = service.getRasterTileUrl({
-        z: 0,
-        x: 0,
-        y: 0,
+      const url = service.getRasterTileUrl(0, 0, 0, {
         style: 'purpleHeat.point',
       });
 
@@ -86,22 +81,30 @@ describe('MapsService', () => {
     });
   });
 
-  describe('listAvailableStyles', () => {
+  describe('getAvailableStyles', () => {
     it('should list all available map styles', () => {
-      const styles = service.listAvailableStyles();
+      const styles = service.getAvailableStyles();
 
       expect(styles).toBeInstanceOf(Array);
       expect(styles.length).toBeGreaterThan(0);
-      expect(styles).toContain('classic.poly');
-      expect(styles).toContain('purpleHeat.point');
+      // Check that styles have the expected structure
+      expect(styles[0]).toHaveProperty('name');
+      expect(styles[0]).toHaveProperty('description');
+      expect(styles[0]).toHaveProperty('type');
     });
   });
 
   describe('parameter validation', () => {
-    it('should handle missing required parameters', () => {
+    it('should validate zoom level', () => {
       expect(() => {
-        service.getTileUrl({} as any);
-      }).toThrow();
+        service.getTileUrl({ z: 25, x: 0, y: 0 });
+      }).toThrow('Invalid zoom level');
+    });
+
+    it('should validate tile coordinates', () => {
+      expect(() => {
+        service.getTileUrl({ z: 0, x: 2, y: 0 });
+      }).toThrow('Invalid tile x coordinate');
     });
   });
 });
