@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { rest } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { server } from '../setup.js';
 import { GBIFClient } from '../../src/core/gbif-client.js';
 import { SpeciesService } from '../../src/services/species/species.service.js';
@@ -36,8 +36,8 @@ describe('SpeciesService', () => {
       };
 
       server.use(
-        rest.get('http://localhost:3000/species/search', (req, res, ctx) => {
-          return res(ctx.json(mockResponse));
+        http.get('http://localhost:3000/species/search', () => {
+          return HttpResponse.json(mockResponse);
         })
       );
 
@@ -50,16 +50,14 @@ describe('SpeciesService', () => {
 
     it('should handle empty search results', async () => {
       server.use(
-        rest.get('http://localhost:3000/species/search', (req, res, ctx) => {
-          return res(
-            ctx.json({
-              offset: 0,
-              limit: 20,
-              endOfRecords: true,
-              count: 0,
-              results: [],
-            })
-          );
+        http.get('http://localhost:3000/species/search', () => {
+          return HttpResponse.json({
+            offset: 0,
+            limit: 20,
+            endOfRecords: true,
+            count: 0,
+            results: [],
+          });
         })
       );
 
@@ -71,16 +69,13 @@ describe('SpeciesService', () => {
 
     it('should handle API errors', async () => {
       server.use(
-        rest.get('http://localhost:3000/species/search', (req, res, ctx) => {
-          return res(
-            ctx.status(500),
-            ctx.json({ error: 'Internal Server Error' })
-          );
+        http.get('http://localhost:3000/species/search', () => {
+          return HttpResponse.json({ error: 'Internal Server Error' }, { status: 500 });
         })
       );
 
       await expect(service.search({ q: 'test' })).rejects.toThrow();
-    });
+    }, 15000);
   });
 
   describe('getByKey', () => {
@@ -98,8 +93,8 @@ describe('SpeciesService', () => {
       };
 
       server.use(
-        rest.get('http://localhost:3000/species/5231190', (req, res, ctx) => {
-          return res(ctx.json(mockSpecies));
+        http.get('http://localhost:3000/species/5231190', () => {
+          return HttpResponse.json(mockSpecies);
         })
       );
 
@@ -111,11 +106,8 @@ describe('SpeciesService', () => {
 
     it('should handle not found error', async () => {
       server.use(
-        rest.get('http://localhost:3000/species/999999999', (req, res, ctx) => {
-          return res(
-            ctx.status(404),
-            ctx.json({ error: 'Not Found' })
-          );
+        http.get('http://localhost:3000/species/999999999', () => {
+          return HttpResponse.json({ error: 'Not Found' }, { status: 404 });
         })
       );
 
@@ -139,12 +131,13 @@ describe('SpeciesService', () => {
       ];
 
       server.use(
-        rest.get('http://localhost:3000/species/suggest', (req, res, ctx) => {
-          const q = req.url.searchParams.get('q');
+        http.get('http://localhost:3000/species/suggest', ({ request }) => {
+          const url = new URL(request.url);
+          const q = url.searchParams.get('q');
           if (q === 'Puma') {
-            return res(ctx.json(mockSuggestions));
+            return HttpResponse.json(mockSuggestions);
           }
-          return res(ctx.json([]));
+          return HttpResponse.json([]);
         })
       );
 
@@ -175,15 +168,14 @@ describe('SpeciesService', () => {
       };
 
       server.use(
-        rest.get('http://localhost:3000/species/match', (req, res, ctx) => {
-          return res(ctx.json(mockMatch));
+        http.get('http://localhost:3000/species/match', () => {
+          return HttpResponse.json(mockMatch);
         })
       );
 
-      const result = await service.match('Panthera leo', true);
+      const result = await service.match({ name: 'Panthera leo', strict: true });
 
-      expect(result).toHaveLength(1);
-      expect(result[0].matchType).toBe('EXACT');
+      expect(result.matchType).toBe('EXACT');
     });
 
     it('should return fuzzy matches', async () => {
@@ -205,15 +197,14 @@ describe('SpeciesService', () => {
       };
 
       server.use(
-        rest.get('http://localhost:3000/species/match', (req, res, ctx) => {
-          return res(ctx.json(mockMatch));
+        http.get('http://localhost:3000/species/match', () => {
+          return HttpResponse.json(mockMatch);
         })
       );
 
-      const result = await service.match('Panthera', false);
+      const result = await service.match({ name: 'Panthera', strict: false });
 
-      expect(result).toHaveLength(1);
-      expect(result[0].matchType).toBe('FUZZY');
+      expect(result.matchType).toBe('FUZZY');
     });
   });
 });

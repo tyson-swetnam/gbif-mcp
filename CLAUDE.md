@@ -6,73 +6,153 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is an MCP (Model Context Protocol) server that provides programmatic access to the GBIF (Global Biodiversity Information Facility) API. The server enables AI assistants to interact with GBIF's biodiversity data including species information, occurrence records, datasets, organizations, maps, literature, and vocabularies.
 
-**Current Status**: Early initialization stage - only documentation and configuration files exist. The actual MCP server implementation needs to be built.
-
 ## Development Commands
-
-As of initial setup, the following commands are planned (per README.md):
 
 ```bash
 npm install          # Install dependencies
-npm run build        # Build the TypeScript server
-npm run dev          # Run in development mode
-npm test             # Run tests
-npm run lint         # Lint code
+npm run build        # Build TypeScript to build/ directory
+npm run dev          # Run in development mode with watch (uses tsx)
+npm start            # Run built server from build/index.js
+npm test             # Run tests with Vitest
+npm run test:coverage # Run tests with coverage report
+npm run lint         # Lint TypeScript files in src/
+npm run format       # Format code with Prettier
+npm run clean        # Remove build directory
+npm run typecheck    # Type-check without emitting files
 ```
-
-Note: `package.json` and build configuration do not exist yet and need to be created.
 
 ## Architecture Overview
 
-### MCP Server Design
+### Layered Architecture
 
-The server should implement the Model Context Protocol to expose GBIF API endpoints as MCP tools. The architecture will consist of:
+The codebase follows a clean, layered architecture with clear separation of concerns:
 
-1. **MCP Protocol Layer**: Handles MCP protocol communication (tools, resources, prompts)
-2. **GBIF API Client**: Makes HTTP requests to GBIF API endpoints (base URL: https://api.gbif.org/v1)
-3. **Tool Definitions**: Maps GBIF API operations to MCP tools
-4. **Response Formatting**: Transforms GBIF API responses into MCP-compatible formats
+```
+MCP Transport (stdio) → MCP Protocol Handler → Tool Orchestrator → Service Layer → GBIF Client → GBIF API
+```
 
-### GBIF API Coverage
+**Key Components:**
 
-The server should provide access to these GBIF API sections:
+1. **Entry Point** (`src/index.ts`): Main server initialization, tool registration, request handling, graceful shutdown, and statistics tracking
 
-- **Species API**: Taxonomic information, species search, name matching
-- **Occurrence API**: Species occurrence records with filtering
-- **Registry API**: Datasets and publishing organizations
-- **Maps API**: Biodiversity data visualizations
-- **Literature API**: Research papers citing GBIF data
-- **Vocabularies API**: Standardized biodiversity terminology
-- **Validator API**: Data quality checks
+2. **GBIF Client** (`src/core/gbif-client.ts`): Centralized HTTP client with:
+   - Circuit breaker pattern (CLOSED → OPEN → HALF_OPEN states)
+   - LRU cache for responses
+   - Request queue with concurrency control (p-queue)
+   - Rate limiting (max requests per minute)
+   - Exponential backoff for retries
+   - Automatic retry for 5xx errors and 429 rate limits
 
-### Key Implementation Considerations
+3. **Tool Registry** (`src/core/tool-registry.ts`): Manages MCP tool registration and lookup
 
-1. **Authentication**: GBIF API is mostly open, but some endpoints may require credentials (GBIF_USERNAME, GBIF_PASSWORD from .env)
-2. **Rate Limiting**: Implement appropriate rate limiting and error handling for GBIF API requests
-3. **Pagination**: GBIF API uses pagination - tools should handle large result sets appropriately
-4. **Data Transformation**: GBIF returns complex nested JSON - should be formatted clearly for AI consumption
-5. **Error Handling**: Gracefully handle API errors, network issues, and invalid parameters
+4. **Service Layer** (`src/services/`): Domain-specific business logic:
+   - `species.service.ts` - Taxonomic operations
+   - `occurrence.service.ts` - Occurrence data queries
+   - Each service wraps GBIF API endpoints with domain logic
 
-## Configuration
+5. **Tool Layer** (`src/tools/`): MCP tools that expose services:
+   - Inherit from `BaseTool` abstract class
+   - Use Zod schemas for input validation
+   - Convert Zod to JSON Schema via `zod-to-json-schema`
+   - Each tool implements the `run(input)` method
 
-- Environment variables go in `.env` (use `.env.example` as template)
-- GBIF API credentials are optional but may be needed for authenticated endpoints
-- MCP server configuration should support Claude Desktop and other MCP clients
+6. **Protocol Layer** (`src/protocol/`): MCP-specific error handling and request context
 
-## Entry Point
+### Tool Implementation Pattern
 
-The built server will be executed via: `node build/index.js`
+All tools follow this pattern:
 
-This should start the MCP server using stdio transport (standard for MCP servers).
+```typescript
+class ExampleTool extends BaseTool<InputType, OutputType> {
+  protected name = 'tool_name';
+  protected description = 'What this tool does';
+  protected inputSchema = z.object({ /* zod schema */ });
 
-## Technology Stack
+  protected async run(input: InputType): Promise<OutputType> {
+    // Tool logic using injected service
+  }
+}
+```
 
-Based on README and MCP server patterns:
-- **Language**: TypeScript
-- **Runtime**: Node.js
-- **Protocol**: MCP (stdio transport)
-- **HTTP Client**: Will need a library for GBIF API requests (e.g., axios, node-fetch)
-- **MCP SDK**: @modelcontextprotocol/sdk
+Tools are registered in `src/index.ts` during server initialization.
+
+## TypeScript Configuration
+
+- **Target**: ES2022
+- **Module System**: NodeNext (ESM with `.js` extensions in imports)
+- **Output**: `build/` directory
+- **Strict Mode**: Enabled with all strict checks
+- **Source Maps**: Generated for debugging
+
+**Important**: Always use `.js` extensions in imports (e.g., `from './config.js'`) because this is an ESM project. TypeScript will resolve to `.ts` files during compilation but emit correct `.js` paths.
+
+## Testing
+
+- **Framework**: Vitest with v8 coverage provider
+- **Test Files**: `tests/**/*.test.ts`
+- **Setup**: `tests/setup.ts` runs before tests
+- **Coverage**: Excludes types, index.ts, and test files
+- Run single test: `npm test -- tests/unit/species.service.test.ts`
+- Run with UI: `npm test -- --ui`
+
+## Configuration & Environment
+
+- Configuration in `src/config/config.ts` loads from environment variables
+- `.env.example` shows available options
+- Key settings:
+  - `GBIF_BASE_URL` - API base URL (default: https://api.gbif.org/v1)
+  - `GBIF_USERNAME` / `GBIF_PASSWORD` - Optional credentials for downloads
+  - `RATE_LIMIT_MAX_REQUESTS` - Max requests per minute
+  - `CACHE_ENABLED` / `CACHE_MAX_SIZE` / `CACHE_TTL` - Caching settings
+  - `LOG_LEVEL` - Logging verbosity (error/warn/info/debug)
+
+## Logging
+
+- **Library**: Winston (configured in `src/utils/logger.ts`)
+- **Transport**: Logs to stderr (stdout is reserved for MCP protocol)
+- **Format**: JSON structured logging
+- **Correlation IDs**: Tracked through request context in `RequestHandler.withContext()`
+
+## Error Handling
+
+The codebase has comprehensive error handling:
+
+1. **Circuit Breaker**: Prevents cascading failures when GBIF API is down
+   - Opens after 5 consecutive failures
+   - Enters HALF_OPEN after 1 minute timeout
+   - Closes after 2 consecutive successes in HALF_OPEN
+
+2. **MCP Errors** (`src/protocol/mcp-errors.ts`): Standardized error codes and formatting
+
+3. **Tool Errors** (`src/tools/base-tool.ts`): Transform HTTP status codes to user-friendly messages
+
+4. **Graceful Shutdown**: Handles SIGINT/SIGTERM/SIGHUP, logs final statistics, closes connections
+
+## MCP Protocol Details
+
+- **Transport**: stdio (StdioServerTransport)
+- **Capabilities**: Currently only `tools` (resources and prompts can be added later)
+- **Handlers**:
+  - `ListToolsRequestSchema` - Returns all registered tools
+  - `CallToolRequestSchema` - Executes a tool with validation
+- **Response Format**: JSON with `content` array containing `text` type
+
+## GBIF API Integration
+
+- **Base URL**: https://api.gbif.org/v1
+- **Authentication**: Basic auth via Axios interceptor (when credentials provided)
+- **Pagination**: GBIF uses `offset`/`limit` with `endOfRecords` flag
+- **Rate Limiting**: Client-side enforcement + backoff on 429 responses
+- **Retry Strategy**: Exponential backoff for 5xx, configurable retry attempts
+
+## Service Extensibility
+
+To add a new GBIF API section:
+
+1. Create service in `src/services/[name]/[name].service.ts`
+2. Create tools in `src/tools/[name]/` inheriting from `BaseTool`
+3. Register tools in `src/index.ts` `initializeServices()` method
+4. Add types to `src/types/gbif.types.ts` if needed
 
 ## Git Workflow
 
@@ -82,27 +162,19 @@ Based on README and MCP server patterns:
 
 After completing any task that modifies files:
 
-1. **Stage the changes**:
-   ```bash
-   git add .
-   ```
-
-2. **Create a descriptive commit**:
-   ```bash
-   git commit -m "Brief description of what was accomplished"
-   ```
+1. Stage the changes: `git add .`
+2. Create a descriptive commit: `git commit -m "Brief description of what was accomplished"`
 
 ### Commit Message Guidelines
 
 Use clear, descriptive commit messages that explain what was done:
 
-- ✅ Good: `"Add Species API service with search and match endpoints"`
-- ✅ Good: `"Implement rate limiting and caching for GBIF client"`
-- ✅ Good: `"Create MCP tool wrappers for occurrence search"`
-- ✅ Good: `"Add unit tests for species service"`
-- ❌ Bad: `"Update files"`
-- ❌ Bad: `"Changes"`
-- ❌ Bad: `"WIP"`
+- ✅ Good: "Add Species API service with search and match endpoints"
+- ✅ Good: "Implement rate limiting and caching for GBIF client"
+- ✅ Good: "Create MCP tool wrappers for occurrence search"
+- ✅ Good: "Add unit tests for species service"
+- ❌ Bad: "Update files"
+- ❌ Bad: "Changes"
 
 ### When to Commit
 
@@ -118,21 +190,13 @@ Commit after:
 
 When multiple related files are created or modified together (e.g., a service + its tests + types), commit them together with a message describing the complete feature.
 
-Example:
-```bash
-git add src/services/species/ src/types/species.ts tests/unit/species.test.ts
-git commit -m "Implement Species API service with search, match, and suggest endpoints"
-```
+## Docker Support
 
-### Do NOT Commit
-
-- Temporary files
-- `.env` files with credentials
-- `node_modules/`
-- Build artifacts in `build/` or `dist/`
-- IDE-specific files (already in `.gitignore`)
-
-These are already excluded via `.gitignore`, but double-check before committing.
+- **Dockerfile**: Multi-stage build using Node 20 Alpine
+- **Image Size**: ~150MB optimized
+- **Security**: Non-root user (uid 1001), read-only filesystem
+- **Health Check**: Built-in
+- **Usage**: `docker build -t gbif-mcp .` then `docker run -i gbif-mcp`
 
 ## License
 

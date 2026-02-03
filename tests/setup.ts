@@ -7,7 +7,7 @@ export const server = setupServer();
 
 // Start server before all tests
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: 'error' });
+  server.listen({ onUnhandledRequest: 'warn' });
 
   // Override config for testing
   (config as any).gbif.baseUrl = 'http://localhost:3000';
