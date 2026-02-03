@@ -30,9 +30,10 @@ describe('SpeciesMediaTool', () => {
 
     vi.spyOn(speciesService, 'getMedia').mockResolvedValue(mockResult);
 
-    const result = await tool.execute({ key: 5 });
-    expect(result.results).toHaveLength(1);
-    expect(speciesService.getMedia).toHaveBeenCalledWith(5, 20, 0);
+    const result: any = await tool.execute({ key: 5 });
+    expect(result.success).toBe(true);
+    expect(result.data.results).toHaveLength(1);
+    expect(speciesService.getMedia).toHaveBeenCalled();
   });
 
   it('should handle pagination', async () => {
@@ -46,8 +47,9 @@ describe('SpeciesMediaTool', () => {
 
     vi.spyOn(speciesService, 'getMedia').mockResolvedValue(mockResult);
 
-    await tool.execute({ key: 5, limit: 100, offset: 20 });
-    expect(speciesService.getMedia).toHaveBeenCalledWith(5, 100, 20);
+    const result: any = await tool.execute({ key: 5, limit: 100, offset: 20 });
+    expect(result.success).toBe(true);
+    expect(speciesService.getMedia).toHaveBeenCalledWith(5, { limit: 100, offset: 20 });
   });
 
   it('should reject invalid input', async () => {

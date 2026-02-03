@@ -15,47 +15,44 @@ describe('OccurrenceDownloadTool', () => {
 
   it('should have correct tool definition', () => {
     const definition = tool.getDefinition();
-    expect(definition.name).toBe('gbif_occurrence_download');
+    expect(definition.name).toBe('gbif_occurrence_download_request');
     expect(definition.description).toContain('download');
   });
 
   it('should execute with valid predicate', async () => {
-    const mockDownload = {
-      key: 'download-123',
-      status: 'PREPARING',
+    vi.spyOn(occurrenceService as any, 'requestDownload').mockResolvedValue('download-123');
+
+    const input = {
+      creator: 'testuser',
+      predicate: {
+        type: 'equals' as const,
+        key: 'TAXON_KEY',
+        value: '5231190',
+      },
     };
 
-    // Mock the download request method (check actual service implementation)
-    vi.spyOn(occurrenceService as any, 'requestDownload').mockResolvedValue(mockDownload);
-
-    const predicate = {
-      type: 'equals' as const,
-      key: 'TAXON_KEY',
-      value: '5231190',
-    };
-
-    const result = await tool.execute({ predicate });
-    expect(result.status).toBe('PREPARING');
+    const result: any = await tool.execute(input);
+    expect(result.success).toBe(true);
+    expect(result.data.downloadKey).toBe('download-123');
   });
 
   it('should handle AND predicates', async () => {
-    const mockDownload = {
-      key: 'download-456',
-      status: 'PREPARING',
+    vi.spyOn(occurrenceService as any, 'requestDownload').mockResolvedValue('download-456');
+
+    const input = {
+      creator: 'testuser',
+      predicate: {
+        type: 'and' as const,
+        predicates: [
+          { type: 'equals' as const, key: 'TAXON_KEY', value: '5231190' },
+          { type: 'equals' as const, key: 'COUNTRY', value: 'US' },
+        ],
+      },
     };
 
-    vi.spyOn(occurrenceService as any, 'requestDownload').mockResolvedValue(mockDownload);
-
-    const predicate = {
-      type: 'and' as const,
-      predicates: [
-        { type: 'equals' as const, key: 'TAXON_KEY', value: '5231190' },
-        { type: 'equals' as const, key: 'COUNTRY', value: 'US' },
-      ],
-    };
-
-    const result = await tool.execute({ predicate });
-    expect(result).toBeDefined();
+    const result: any = await tool.execute(input);
+    expect(result.success).toBe(true);
+    expect(result.data).toBeDefined();
   });
 
   it('should handle service errors', async () => {
@@ -63,12 +60,15 @@ describe('OccurrenceDownloadTool', () => {
       new Error('Download request failed')
     );
 
-    const predicate = {
-      type: 'equals' as const,
-      key: 'TAXON_KEY',
-      value: '1',
+    const input = {
+      creator: 'testuser',
+      predicate: {
+        type: 'equals' as const,
+        key: 'TAXON_KEY',
+        value: '1',
+      },
     };
 
-    await expect(tool.execute({ predicate })).rejects.toThrow();
+    await expect(tool.execute(input)).rejects.toThrow();
   });
 });

@@ -30,8 +30,9 @@ describe('SpeciesDistributionsTool', () => {
 
     vi.spyOn(speciesService, 'getDistributions').mockResolvedValue(mockResult);
 
-    const result = await tool.execute({ key: 5 });
-    expect(result.results).toHaveLength(1);
+    const result: any = await tool.execute({ key: 5 });
+    expect(result.success).toBe(true);
+    expect(result.data.results).toHaveLength(1);
   });
 
   it('should handle pagination', async () => {
@@ -45,8 +46,9 @@ describe('SpeciesDistributionsTool', () => {
 
     vi.spyOn(speciesService, 'getDistributions').mockResolvedValue(mockResult);
 
-    await tool.execute({ key: 5, limit: 25, offset: 5 });
-    expect(speciesService.getDistributions).toHaveBeenCalledWith(5, 25, 5);
+    const result: any = await tool.execute({ key: 5, limit: 25, offset: 5 });
+    expect(result.success).toBe(true);
+    expect(speciesService.getDistributions).toHaveBeenCalledWith(5, { limit: 25, offset: 5 });
   });
 
   it('should handle service errors', async () => {

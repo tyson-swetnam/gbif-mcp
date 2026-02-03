@@ -22,22 +22,25 @@ describe('OccurrenceCountTool', () => {
   it('should execute with valid filters', async () => {
     vi.spyOn(occurrenceService, 'count').mockResolvedValue(15000);
 
-    const result = await tool.execute({ taxonKey: 5231190, country: 'US' });
-    expect(result).toBe(15000);
+    const result: any = await tool.execute({ taxonKey: 5231190, country: 'US' });
+    expect(result.success).toBe(true);
+    expect(result.data.count).toBe(15000);
     expect(occurrenceService.count).toHaveBeenCalled();
   });
 
   it('should handle zero count', async () => {
     vi.spyOn(occurrenceService, 'count').mockResolvedValue(0);
 
-    const result = await tool.execute({ taxonKey: 999999 });
-    expect(result).toBe(0);
+    const result: any = await tool.execute({ taxonKey: 999999 });
+    expect(result.success).toBe(true);
+    expect(result.data.count).toBe(0);
   });
 
   it('should handle year range', async () => {
     vi.spyOn(occurrenceService, 'count').mockResolvedValue(500);
 
-    await tool.execute({ year: '2020,2024' });
+    const result: any = await tool.execute({ year: '2020,2024' });
+    expect(result.success).toBe(true);
     expect(occurrenceService.count).toHaveBeenCalled();
   });
 

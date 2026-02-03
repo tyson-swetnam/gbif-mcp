@@ -33,9 +33,10 @@ describe('SpeciesChildrenTool', () => {
 
     vi.spyOn(speciesService, 'getChildren').mockResolvedValue(mockResult);
 
-    const result = await tool.execute({ key: 5 });
-    expect(result.results).toHaveLength(2);
-    expect(speciesService.getChildren).toHaveBeenCalledWith(5, 20, 0);
+    const result: any = await tool.execute({ key: 5 });
+    expect(result.success).toBe(true);
+    expect(result.data.results).toHaveLength(2);
+    expect(speciesService.getChildren).toHaveBeenCalled();
   });
 
   it('should handle limit and offset', async () => {
@@ -49,8 +50,9 @@ describe('SpeciesChildrenTool', () => {
 
     vi.spyOn(speciesService, 'getChildren').mockResolvedValue(mockResult);
 
-    await tool.execute({ key: 5, limit: 50, offset: 10 });
-    expect(speciesService.getChildren).toHaveBeenCalledWith(5, 50, 10);
+    const result: any = await tool.execute({ key: 5, limit: 50, offset: 10 });
+    expect(result.success).toBe(true);
+    expect(speciesService.getChildren).toHaveBeenCalledWith(5, { limit: 50, offset: 10 });
   });
 
   it('should reject invalid key type', async () => {

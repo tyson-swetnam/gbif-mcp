@@ -15,7 +15,7 @@ describe('SpeciesVernacularNamesTool', () => {
 
   it('should have correct tool definition', () => {
     const definition = tool.getDefinition();
-    expect(definition.name).toBe('gbif_species_vernacular');
+    expect(definition.name).toBe('gbif_species_vernacular_names');
     expect(definition.description).toContain('vernacular');
   });
 
@@ -33,8 +33,9 @@ describe('SpeciesVernacularNamesTool', () => {
 
     vi.spyOn(speciesService, 'getVernacularNames').mockResolvedValue(mockResult);
 
-    const result = await tool.execute({ key: 5 });
-    expect(result.results).toHaveLength(2);
+    const result: any = await tool.execute({ key: 5 });
+    expect(result.success).toBe(true);
+    expect(result.data.results).toHaveLength(2);
   });
 
   it('should handle pagination', async () => {
@@ -48,8 +49,9 @@ describe('SpeciesVernacularNamesTool', () => {
 
     vi.spyOn(speciesService, 'getVernacularNames').mockResolvedValue(mockResult);
 
-    await tool.execute({ key: 5, limit: 100 });
-    expect(speciesService.getVernacularNames).toHaveBeenCalledWith(5, 100, 0);
+    const result: any = await tool.execute({ key: 5, limit: 100 });
+    expect(result.success).toBe(true);
+    expect(speciesService.getVernacularNames).toHaveBeenCalledWith(5, undefined, { limit: 100, offset: 0 });
   });
 
   it('should handle service errors', async () => {

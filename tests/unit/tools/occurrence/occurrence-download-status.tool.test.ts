@@ -29,8 +29,9 @@ describe('OccurrenceDownloadStatusTool', () => {
 
     vi.spyOn(occurrenceService, 'getDownloadStatus').mockResolvedValue(mockStatus);
 
-    const result = await tool.execute({ downloadKey: 'download-123' });
-    expect(result.status).toBe('SUCCEEDED');
+    const result: any = await tool.execute({ downloadKey: 'download-123' });
+    expect(result.success).toBe(true);
+    expect(result.data.status).toBe('SUCCEEDED');
     expect(occurrenceService.getDownloadStatus).toHaveBeenCalledWith('download-123');
   });
 
@@ -42,8 +43,9 @@ describe('OccurrenceDownloadStatusTool', () => {
 
     vi.spyOn(occurrenceService, 'getDownloadStatus').mockResolvedValue(mockStatus);
 
-    const result = await tool.execute({ downloadKey: 'download-456' });
-    expect(result.status).toBe('PREPARING');
+    const result: any = await tool.execute({ downloadKey: 'download-456' });
+    expect(result.success).toBe(true);
+    expect(result.data.status).toBe('PREPARING');
   });
 
   it('should reject empty download key', async () => {

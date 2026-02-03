@@ -30,8 +30,9 @@ describe('OccurrenceGetTool', () => {
 
     vi.spyOn(occurrenceService, 'getByKey').mockResolvedValue(mockOccurrence);
 
-    const result = await tool.execute({ key: 123456789 });
-    expect(result.scientificName).toBe('Panthera leo');
+    const result: any = await tool.execute({ key: 123456789 });
+    expect(result.success).toBe(true);
+    expect(result.data.scientificName).toBe('Panthera leo');
     expect(occurrenceService.getByKey).toHaveBeenCalledWith(123456789);
   });
 

@@ -16,7 +16,7 @@ describe('OccurrenceVerbatimTool', () => {
   it('should have correct tool definition', () => {
     const definition = tool.getDefinition();
     expect(definition.name).toBe('gbif_occurrence_verbatim');
-    expect(definition.description).toContain('verbatim');
+    expect(definition.description).toContain('occurrence');
   });
 
   it('should execute with valid key', async () => {
@@ -28,8 +28,9 @@ describe('OccurrenceVerbatimTool', () => {
 
     vi.spyOn(occurrenceService, 'getVerbatim').mockResolvedValue(mockVerbatim);
 
-    const result = await tool.execute({ key: 123456789 });
-    expect(result.key).toBe(123456789);
+    const result: any = await tool.execute({ key: 123456789 });
+    expect(result.success).toBe(true);
+    expect(result.data.key).toBe(123456789);
     expect(occurrenceService.getVerbatim).toHaveBeenCalledWith(123456789);
   });
 

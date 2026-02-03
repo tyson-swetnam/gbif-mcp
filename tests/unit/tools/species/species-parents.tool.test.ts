@@ -27,8 +27,9 @@ describe('SpeciesParentsTool', () => {
 
     vi.spyOn(speciesService, 'getParents').mockResolvedValue(mockResult);
 
-    const result = await tool.execute({ key: 5 });
-    expect(result).toHaveLength(2);
+    const result: any = await tool.execute({ key: 5 });
+    expect(result.success).toBe(true);
+    expect(result.data).toHaveLength(2);
     expect(speciesService.getParents).toHaveBeenCalledWith(5);
   });
 

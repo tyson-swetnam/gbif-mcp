@@ -32,8 +32,9 @@ describe('OccurrenceSearchTool', () => {
 
     vi.spyOn(occurrenceService, 'search').mockResolvedValue(mockResult);
 
-    const result = await tool.execute({ taxonKey: 5231190, country: 'KE' });
-    expect(result.results).toHaveLength(1);
+    const result: any = await tool.execute({ taxonKey: 5231190, country: 'KE' });
+    expect(result.success).toBe(true);
+    expect(result.data.results).toHaveLength(1);
     expect(occurrenceService.search).toHaveBeenCalled();
   });
 
@@ -48,12 +49,13 @@ describe('OccurrenceSearchTool', () => {
 
     vi.spyOn(occurrenceService, 'search').mockResolvedValue(mockResult);
 
-    await tool.execute({
+    const result: any = await tool.execute({
       hasCoordinate: true,
       decimalLatitude: '-1.5,1.5',
       decimalLongitude: '35,37',
     });
 
+    expect(result.success).toBe(true);
     expect(occurrenceService.search).toHaveBeenCalled();
   });
 
@@ -68,7 +70,8 @@ describe('OccurrenceSearchTool', () => {
 
     vi.spyOn(occurrenceService, 'search').mockResolvedValue(mockResult);
 
-    await tool.execute({ taxonKey: 1, limit: 50, offset: 100 });
+    const result: any = await tool.execute({ taxonKey: 1, limit: 50, offset: 100 });
+    expect(result.success).toBe(true);
     expect(occurrenceService.search).toHaveBeenCalled();
   });
 
