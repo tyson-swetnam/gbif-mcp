@@ -49,11 +49,7 @@ theme:
     code: Roboto Mono
 
 plugins:
-  - search:
-      separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
-  - tags
-  - git-revision-date-localized:
-      enable_creation_date: true
+  - search
 
 markdown_extensions:
   - pymdownx.highlight:
