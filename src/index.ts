@@ -23,6 +23,11 @@ import { MCPError, MCPErrorCode, MCPErrorFormatter } from './protocol/mcp-errors
 // Import services
 import { SpeciesService } from './services/species/species.service.js';
 import { OccurrenceService } from './services/occurrence/occurrence.service.js';
+import { RegistryService } from './services/registry/registry.service.js';
+import { MapsService } from './services/maps/maps.service.js';
+import { LiteratureService } from './services/literature/literature.service.js';
+import { VocabulariesService } from './services/vocabularies/vocabularies.service.js';
+import { ValidatorService } from './services/validator/validator.service.js';
 
 // Import species tools
 import {
@@ -49,6 +54,52 @@ import {
   OccurrenceDownloadStatusTool,
   OccurrenceVerbatimTool,
 } from './tools/occurrence/index.js';
+
+// Import registry tools
+import {
+  RegistrySearchDatasetsTool,
+  RegistryGetDatasetTool,
+  RegistryDatasetMetricsTool,
+  RegistrySearchOrganizationsTool,
+  RegistryGetOrganizationTool,
+  RegistryOrganizationDatasetsTool,
+  RegistrySearchNetworksTool,
+  RegistryGetNetworkTool,
+  RegistryNetworkDatasetsTool,
+  RegistrySearchInstallationsTool,
+  RegistryGetInstallationTool,
+  RegistrySearchCollectionsTool,
+  RegistryGetCollectionTool,
+  RegistrySearchInstitutionsTool,
+  RegistryGetInstitutionTool,
+} from './tools/registry/index.js';
+
+// Import maps tools
+import {
+  MapsGetTileUrlTool,
+  MapsGetVectorTileUrlTool,
+  MapsGetRasterTileUrlTool,
+  MapsListStylesTool,
+} from './tools/maps/index.js';
+
+// Import literature tools
+import {
+  LiteratureSearchTool,
+  LiteratureGetTool,
+} from './tools/literature/index.js';
+
+// Import vocabularies tools
+import {
+  VocabulariesListTool,
+  VocabulariesGetTool,
+  VocabulariesGetConceptTool,
+} from './tools/vocabularies/index.js';
+
+// Import validator tools
+import {
+  ValidatorValidateDwcaTool,
+  ValidatorGetStatusTool,
+} from './tools/validator/index.js';
 
 /**
  * Server statistics for monitoring
@@ -121,6 +172,11 @@ class GBIFMCPServer {
       // Create service instances
       const speciesService = new SpeciesService(this.client);
       const occurrenceService = new OccurrenceService(this.client);
+      const registryService = new RegistryService(this.client);
+      const mapsService = new MapsService(this.client);
+      const literatureService = new LiteratureService(this.client);
+      const vocabulariesService = new VocabulariesService(this.client);
+      const validatorService = new ValidatorService(this.client);
 
       // Register all species tools
       this.toolRegistry.register(new SpeciesSearchTool(speciesService));
@@ -144,11 +200,52 @@ class GBIFMCPServer {
       this.toolRegistry.register(new OccurrenceDownloadStatusTool(occurrenceService));
       this.toolRegistry.register(new OccurrenceVerbatimTool(occurrenceService));
 
+      // Register all registry tools
+      this.toolRegistry.register(new RegistrySearchDatasetsTool(registryService));
+      this.toolRegistry.register(new RegistryGetDatasetTool(registryService));
+      this.toolRegistry.register(new RegistryDatasetMetricsTool(registryService));
+      this.toolRegistry.register(new RegistrySearchOrganizationsTool(registryService));
+      this.toolRegistry.register(new RegistryGetOrganizationTool(registryService));
+      this.toolRegistry.register(new RegistryOrganizationDatasetsTool(registryService));
+      this.toolRegistry.register(new RegistrySearchNetworksTool(registryService));
+      this.toolRegistry.register(new RegistryGetNetworkTool(registryService));
+      this.toolRegistry.register(new RegistryNetworkDatasetsTool(registryService));
+      this.toolRegistry.register(new RegistrySearchInstallationsTool(registryService));
+      this.toolRegistry.register(new RegistryGetInstallationTool(registryService));
+      this.toolRegistry.register(new RegistrySearchCollectionsTool(registryService));
+      this.toolRegistry.register(new RegistryGetCollectionTool(registryService));
+      this.toolRegistry.register(new RegistrySearchInstitutionsTool(registryService));
+      this.toolRegistry.register(new RegistryGetInstitutionTool(registryService));
+
+      // Register all maps tools
+      this.toolRegistry.register(new MapsGetTileUrlTool(mapsService));
+      this.toolRegistry.register(new MapsGetVectorTileUrlTool(mapsService));
+      this.toolRegistry.register(new MapsGetRasterTileUrlTool(mapsService));
+      this.toolRegistry.register(new MapsListStylesTool(mapsService));
+
+      // Register all literature tools
+      this.toolRegistry.register(new LiteratureSearchTool(literatureService));
+      this.toolRegistry.register(new LiteratureGetTool(literatureService));
+
+      // Register all vocabularies tools
+      this.toolRegistry.register(new VocabulariesListTool(vocabulariesService));
+      this.toolRegistry.register(new VocabulariesGetTool(vocabulariesService));
+      this.toolRegistry.register(new VocabulariesGetConceptTool(vocabulariesService));
+
+      // Register all validator tools
+      this.toolRegistry.register(new ValidatorValidateDwcaTool(validatorService));
+      this.toolRegistry.register(new ValidatorGetStatusTool(validatorService));
+
       const tools = this.toolRegistry.getAll();
       logger.info('Services initialized successfully', {
         toolCount: tools.length,
         speciesTools: 11,
         occurrenceTools: 7,
+        registryTools: 15,
+        mapsTools: 4,
+        literatureTools: 2,
+        vocabulariesTools: 3,
+        validatorTools: 2,
         tools: tools.map(t => t.getDefinition().name),
       });
     } catch (error) {

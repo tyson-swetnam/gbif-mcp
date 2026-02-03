@@ -469,6 +469,155 @@ export class RegistryService {
   }
 
   /**
+   * Search IPT installations
+   */
+  async searchInstallations(params: any = {}): Promise<GBIFResponse<any>> {
+    try {
+      logger.info('Searching installations', { params });
+
+      const response = await this.client.get<GBIFResponse<any>>(
+        '/installation/search',
+        params
+      );
+
+      logger.info('Installation search completed', {
+        resultCount: response.results?.length || 0,
+        totalCount: response.count,
+      });
+
+      return response;
+    } catch (error) {
+      logger.error('Installation search failed', { params, error });
+      throw this.handleError(error, 'Failed to search installations');
+    }
+  }
+
+  /**
+   * Get installation by key
+   */
+  async getInstallation(key: string): Promise<any> {
+    try {
+      logger.info('Fetching installation by key', { key });
+
+      if (!this.isValidUUID(key)) {
+        throw new Error('Invalid installation key: must be a valid UUID');
+      }
+
+      const installation = await this.client.get<any>(`/installation/${key}`);
+
+      logger.info('Installation retrieved successfully', {
+        key,
+        type: installation.type,
+      });
+
+      return installation;
+    } catch (error) {
+      logger.error('Failed to get installation', { key, error });
+      throw this.handleError(error, `Failed to get installation with key ${key}`);
+    }
+  }
+
+  /**
+   * Search scientific collections (GRSciColl)
+   */
+  async searchCollections(params: any = {}): Promise<GBIFResponse<any>> {
+    try {
+      logger.info('Searching collections', { params });
+
+      const response = await this.client.get<GBIFResponse<any>>(
+        '/grscicoll/collection',
+        params
+      );
+
+      logger.info('Collection search completed', {
+        resultCount: response.results?.length || 0,
+        totalCount: response.count,
+      });
+
+      return response;
+    } catch (error) {
+      logger.error('Collection search failed', { params, error });
+      throw this.handleError(error, 'Failed to search collections');
+    }
+  }
+
+  /**
+   * Get collection by key (GRSciColl)
+   */
+  async getCollection(key: string): Promise<any> {
+    try {
+      logger.info('Fetching collection by key', { key });
+
+      if (!this.isValidUUID(key)) {
+        throw new Error('Invalid collection key: must be a valid UUID');
+      }
+
+      const collection = await this.client.get<any>(`/grscicoll/collection/${key}`);
+
+      logger.info('Collection retrieved successfully', {
+        key,
+        code: collection.code,
+        name: collection.name,
+      });
+
+      return collection;
+    } catch (error) {
+      logger.error('Failed to get collection', { key, error });
+      throw this.handleError(error, `Failed to get collection with key ${key}`);
+    }
+  }
+
+  /**
+   * Search institutions (GRSciColl)
+   */
+  async searchInstitutions(params: any = {}): Promise<GBIFResponse<any>> {
+    try {
+      logger.info('Searching institutions', { params });
+
+      const response = await this.client.get<GBIFResponse<any>>(
+        '/grscicoll/institution',
+        params
+      );
+
+      logger.info('Institution search completed', {
+        resultCount: response.results?.length || 0,
+        totalCount: response.count,
+      });
+
+      return response;
+    } catch (error) {
+      logger.error('Institution search failed', { params, error });
+      throw this.handleError(error, 'Failed to search institutions');
+    }
+  }
+
+  /**
+   * Get institution by key (GRSciColl)
+   */
+  async getInstitution(key: string): Promise<any> {
+    try {
+      logger.info('Fetching institution by key', { key });
+
+      if (!this.isValidUUID(key)) {
+        throw new Error('Invalid institution key: must be a valid UUID');
+      }
+
+      const institution = await this.client.get<any>(`/grscicoll/institution/${key}`);
+
+      logger.info('Institution retrieved successfully', {
+        key,
+        code: institution.code,
+        name: institution.name,
+      });
+
+      return institution;
+    } catch (error) {
+      logger.error('Failed to get institution', { key, error });
+      throw this.handleError(error, `Failed to get institution with key ${key}`);
+    }
+  }
+
+  /**
    * Handle and transform errors
    */
   private handleError(error: any, message: string): Error {
