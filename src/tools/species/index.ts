@@ -12,3 +12,5 @@ export { SpeciesParentsTool } from './species-parents.tool.js';
 export { SpeciesDescriptionsTool } from './species-descriptions.tool.js';
 export { SpeciesDistributionsTool } from './species-distributions.tool.js';
 export { SpeciesMediaTool } from './species-media.tool.js';
+export { SpeciesMetricsTool } from './species-metrics.tool.js';
+export { SpeciesParseNamesTool } from './species-parse-names.tool.js';

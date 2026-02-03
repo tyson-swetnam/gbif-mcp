@@ -42,6 +42,8 @@ import {
   SpeciesDescriptionsTool,
   SpeciesDistributionsTool,
   SpeciesMediaTool,
+  SpeciesMetricsTool,
+  SpeciesParseNamesTool,
 } from './tools/species/index.js';
 
 // Import occurrence tools
@@ -53,6 +55,9 @@ import {
   OccurrenceDownloadPredicateBuilderTool,
   OccurrenceDownloadStatusTool,
   OccurrenceVerbatimTool,
+  OccurrenceCountsByBasisOfRecordTool,
+  OccurrenceCountsByYearTool,
+  OccurrenceCountsByCountryTool,
 } from './tools/occurrence/index.js';
 
 // Import registry tools
@@ -190,6 +195,8 @@ class GBIFMCPServer {
       this.toolRegistry.register(new SpeciesDescriptionsTool(speciesService));
       this.toolRegistry.register(new SpeciesDistributionsTool(speciesService));
       this.toolRegistry.register(new SpeciesMediaTool(speciesService));
+      this.toolRegistry.register(new SpeciesMetricsTool(speciesService));
+      this.toolRegistry.register(new SpeciesParseNamesTool(speciesService));
 
       // Register all occurrence tools
       this.toolRegistry.register(new OccurrenceSearchTool(occurrenceService));
@@ -199,6 +206,9 @@ class GBIFMCPServer {
       this.toolRegistry.register(new OccurrenceDownloadPredicateBuilderTool(occurrenceService));
       this.toolRegistry.register(new OccurrenceDownloadStatusTool(occurrenceService));
       this.toolRegistry.register(new OccurrenceVerbatimTool(occurrenceService));
+      this.toolRegistry.register(new OccurrenceCountsByBasisOfRecordTool(occurrenceService));
+      this.toolRegistry.register(new OccurrenceCountsByYearTool(occurrenceService));
+      this.toolRegistry.register(new OccurrenceCountsByCountryTool(occurrenceService));
 
       // Register all registry tools
       this.toolRegistry.register(new RegistrySearchDatasetsTool(registryService));
@@ -239,8 +249,8 @@ class GBIFMCPServer {
       const tools = this.toolRegistry.getAll();
       logger.info('Services initialized successfully', {
         toolCount: tools.length,
-        speciesTools: 11,
-        occurrenceTools: 7,
+        speciesTools: 13,
+        occurrenceTools: 10,
         registryTools: 15,
         mapsTools: 4,
         literatureTools: 2,

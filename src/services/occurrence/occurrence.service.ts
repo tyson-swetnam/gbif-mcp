@@ -521,6 +521,78 @@ export class OccurrenceService {
   }
 
   /**
+   * Get occurrence counts by basis of record
+   */
+  async getCountsByBasisOfRecord(params: OccurrenceSearchParams = {}): Promise<Record<string, number>> {
+    try {
+      logger.info('Getting occurrence counts by basis of record', { params });
+
+      const searchParams = this.sanitizeSearchParams(params);
+      const response = await this.client.get<Record<string, number>>(
+        `${this.basePath}/counts/basisOfRecord`,
+        searchParams
+      );
+
+      logger.info('Basis of record counts retrieved', {
+        recordTypes: Object.keys(response).length,
+      });
+
+      return response;
+    } catch (error) {
+      logger.error('Failed to get counts by basis of record', { params, error });
+      throw this.handleError(error, 'Failed to get occurrence counts by basis of record');
+    }
+  }
+
+  /**
+   * Get occurrence counts by year
+   */
+  async getCountsByYear(params: OccurrenceSearchParams = {}): Promise<Record<string, number>> {
+    try {
+      logger.info('Getting occurrence counts by year', { params });
+
+      const searchParams = this.sanitizeSearchParams(params);
+      const response = await this.client.get<Record<string, number>>(
+        `${this.basePath}/counts/year`,
+        searchParams
+      );
+
+      logger.info('Year counts retrieved', {
+        years: Object.keys(response).length,
+      });
+
+      return response;
+    } catch (error) {
+      logger.error('Failed to get counts by year', { params, error });
+      throw this.handleError(error, 'Failed to get occurrence counts by year');
+    }
+  }
+
+  /**
+   * Get occurrence counts by country
+   */
+  async getCountsByCountry(params: OccurrenceSearchParams = {}): Promise<Record<string, number>> {
+    try {
+      logger.info('Getting occurrence counts by country', { params });
+
+      const searchParams = this.sanitizeSearchParams(params);
+      const response = await this.client.get<Record<string, number>>(
+        `${this.basePath}/counts/countries`,
+        searchParams
+      );
+
+      logger.info('Country counts retrieved', {
+        countries: Object.keys(response).length,
+      });
+
+      return response;
+    } catch (error) {
+      logger.error('Failed to get counts by country', { params, error });
+      throw this.handleError(error, 'Failed to get occurrence counts by country');
+    }
+  }
+
+  /**
    * Validate occurrence key
    */
   private isValidKey(key: number): boolean {

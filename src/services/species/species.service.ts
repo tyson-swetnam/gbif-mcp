@@ -583,6 +583,56 @@ export class SpeciesService {
   }
 
   /**
+   * Get species occurrence metrics
+   */
+  async getMetrics(key: number): Promise<any> {
+    try {
+      logger.info('Getting species metrics', { key });
+
+      if (!this.isValidKey(key)) {
+        throw new Error('Invalid species key');
+      }
+
+      const metrics = await this.client.get<any>(`${this.basePath}/${key}/metrics`);
+
+      logger.info('Species metrics retrieved', {
+        key,
+        occurrenceCount: metrics.occurrenceCount,
+      });
+
+      return metrics;
+    } catch (error) {
+      logger.error('Failed to get species metrics', { key, error });
+      throw this.handleError(error, 'Failed to get species metrics');
+    }
+  }
+
+  /**
+   * Parse scientific names
+   */
+  async parseNames(names: string[]): Promise<any[]> {
+    try {
+      logger.info('Parsing scientific names', { count: names.length });
+
+      if (!names || names.length === 0) {
+        throw new Error('At least one name is required for parsing');
+      }
+
+      const response = await this.client.post<any[]>(`${this.basePath}/parser/name`, names);
+
+      logger.info('Names parsed successfully', {
+        count: response.length,
+        parsed: response.filter(r => r.parsed).length,
+      });
+
+      return response;
+    } catch (error) {
+      logger.error('Failed to parse names', { count: names.length, error });
+      throw this.handleError(error, 'Failed to parse scientific names');
+    }
+  }
+
+  /**
    * Validate taxon key
    */
   private isValidKey(key: number): boolean {
