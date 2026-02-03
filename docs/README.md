@@ -22,7 +22,7 @@ pip install -r requirements.txt
 Serve documentation locally with live reload:
 
 ```bash
-mkdocs serve
+zensical serve
 ```
 
 Then open http://localhost:8000 in your browser.
@@ -32,7 +32,7 @@ Then open http://localhost:8000 in your browser.
 Build static site:
 
 ```bash
-mkdocs build
+zensical build
 ```
 
 Output will be in the `site/` directory.
@@ -70,7 +70,7 @@ docs/
 
 1. Create markdown file in appropriate directory
 2. Add to `mkdocs.yml` nav section
-3. Test locally with `mkdocs serve`
+3. Test locally with `zensical serve`
 4. Commit and push (auto-deploys)
 
 ### Style Guide
