@@ -37,6 +37,14 @@ const ConfigSchema = z.object({
     checkPeriod: z.number().default(600000), // 10 minutes
   }),
 
+  // Response Size Limiting Configuration
+  responseLimits: z.object({
+    maxSizeBytes: z.number().default(250 * 1024), // 250KB
+    warnSizeBytes: z.number().default(200 * 1024), // 200KB warning
+    enableTruncation: z.boolean().default(true),
+    enableSizeLogging: z.boolean().default(true),
+  }),
+
   // Logging Configuration
   logging: z.object({
     level: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
@@ -83,6 +91,16 @@ const parseConfig = () => {
       maxSize: process.env.CACHE_MAX_SIZE ? parseInt(process.env.CACHE_MAX_SIZE, 10) : undefined,
       ttl: process.env.CACHE_TTL ? parseInt(process.env.CACHE_TTL, 10) : undefined,
       checkPeriod: process.env.CACHE_CHECK_PERIOD ? parseInt(process.env.CACHE_CHECK_PERIOD, 10) : undefined,
+    },
+    responseLimits: {
+      maxSizeBytes: process.env.RESPONSE_MAX_SIZE_KB
+        ? parseInt(process.env.RESPONSE_MAX_SIZE_KB, 10) * 1024
+        : undefined,
+      warnSizeBytes: process.env.RESPONSE_WARN_SIZE_KB
+        ? parseInt(process.env.RESPONSE_WARN_SIZE_KB, 10) * 1024
+        : undefined,
+      enableTruncation: process.env.RESPONSE_ENABLE_TRUNCATION !== 'false',
+      enableSizeLogging: process.env.RESPONSE_ENABLE_SIZE_LOGGING !== 'false',
     },
     logging: {
       level: process.env.LOG_LEVEL,
