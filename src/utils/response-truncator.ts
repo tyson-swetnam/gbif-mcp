@@ -1,6 +1,5 @@
 import { config } from '../config/config.js';
-import { logger } from './logger.js';
-import type { TruncatedResponse, GBIFResponse, isPaginatedResponse } from '../types/gbif.types.js';
+import type { TruncatedResponse, GBIFResponse } from '../types/gbif.types.js';
 
 /**
  * Utility for truncating large responses to stay within size limits
@@ -92,7 +91,7 @@ export class ResponseTruncator {
    * Generate pagination suggestion based on data
    */
   private generatePaginationSuggestion(
-    totalCount: number,
+    _totalCount: number,
     returnedCount: number,
     originalParams: Record<string, any>
   ): { suggestion: string; example: Record<string, any> } {
@@ -128,7 +127,7 @@ export class ResponseTruncator {
    * Create truncated metadata-only response for non-paginated data
    */
   createMetadataOnlyResponse<T>(
-    data: T,
+    _data: T,
     originalSize: number
   ): TruncatedResponse<null> {
     return {
