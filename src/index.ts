@@ -367,6 +367,29 @@ class GBIFMCPServer {
               // Execute tool
               const result = await tool.execute(args || {});
 
+              // Final size check before returning
+              const resultStr = JSON.stringify(result, null, 2);
+              if (resultStr.length > config.responseLimits.maxSizeBytes) {
+                logger.error('Tool result exceeds size limit after truncation', {
+                  correlationId: context.correlationId,
+                  tool: name,
+                  size: resultStr.length,
+                  limit: config.responseLimits.maxSizeBytes
+                });
+
+                return {
+                  content: [{
+                    type: 'text',
+                    text: JSON.stringify({
+                      error: 'Response too large',
+                      size: `${Math.round(resultStr.length / 1024)}KB`,
+                      limit: '250KB',
+                      suggestion: 'Use smaller limit parameter or add more filters to narrow your search. The response exceeded limits even after automatic truncation.'
+                    }, null, 2)
+                  }]
+                };
+              }
+
               this.stats.successCount++;
 
               logger.info('Tool execution successful', {
@@ -379,7 +402,7 @@ class GBIFMCPServer {
                 content: [
                   {
                     type: 'text',
-                    text: JSON.stringify(result, null, 2),
+                    text: resultStr,
                   },
                 ],
               };
