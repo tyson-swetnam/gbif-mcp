@@ -41,5 +41,6 @@ export function createLargeDataset<T>(
  * Helper to estimate size of data in KB
  */
 export function estimateSize(data: any): number {
-  return Math.round(JSON.stringify(data).length / 1024);
+  const bytes = JSON.stringify(data).length;
+  return Math.ceil(bytes / 1024);
 }
