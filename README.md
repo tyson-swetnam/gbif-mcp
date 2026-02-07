@@ -72,6 +72,46 @@ Every tool parameter includes:
 
 This makes it easy for AI assistants to construct accurate queries without guessing parameter formats.
 
+## Response Size Limits
+
+To ensure compatibility with AI context windows, this server implements automatic response size limiting:
+
+- **Maximum Response Size**: 250KB (configurable via `RESPONSE_MAX_SIZE_KB`)
+- **Warning Threshold**: 200KB (logs warnings for optimization)
+- **Smart Truncation**: Large responses are automatically truncated with helpful pagination guidance
+
+### Configuration
+
+Control response limiting via environment variables:
+
+```bash
+RESPONSE_MAX_SIZE_KB=250              # Maximum response size
+RESPONSE_WARN_SIZE_KB=200             # Warning threshold
+RESPONSE_ENABLE_TRUNCATION=true       # Enable smart truncation
+RESPONSE_ENABLE_SIZE_LOGGING=true     # Log size metrics
+```
+
+### Truncated Responses
+
+When a response exceeds the size limit, you'll receive:
+
+```json
+{
+  "truncated": true,
+  "originalSize": "1.2MB",
+  "returnedSize": "248KB",
+  "metadata": {
+    "totalCount": 1000,
+    "returnedCount": 23
+  },
+  "pagination": {
+    "suggestion": "Use limit=20 with offset=0, then offset=20, offset=40...",
+    "example": { "taxonKey": 212, "limit": 20, "offset": 0 }
+  },
+  "data": { ... }
+}
+```
+
 ## Installation
 
 ### From Source
