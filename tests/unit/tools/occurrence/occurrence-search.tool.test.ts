@@ -88,4 +88,55 @@ describe('OccurrenceSearchTool', () => {
 
     await expect(tool.execute({ taxonKey: 1 })).rejects.toThrow();
   });
+
+  describe('Response Size Limiting', () => {
+    it('should pass through small responses', async () => {
+      const smallResult = {
+        offset: 0,
+        limit: 10,
+        endOfRecords: true,
+        count: 10,
+        results: Array(10).fill({
+          key: 123,
+          scientificName: 'Test species',
+          country: 'US'
+        }),
+      };
+
+      vi.spyOn(occurrenceService, 'search').mockResolvedValue(smallResult);
+
+      const result: any = await tool.execute({ taxonKey: 1, limit: 10 });
+
+      expect(result.success).toBe(true);
+      expect((result as any).truncated).toBeUndefined();
+    });
+
+    it('should truncate large responses', async () => {
+      // Create a very large response
+      const largeResults = Array(5000).fill(null).map((_, i) => ({
+        key: i,
+        scientificName: 'Very long scientific name that takes space'.repeat(50),
+        locality: 'x'.repeat(1000),
+        eventDate: '2024-01-01',
+        country: 'US'
+      }));
+
+      const largeResult = {
+        offset: 0,
+        limit: 300,
+        endOfRecords: false,
+        count: 5000,
+        results: largeResults,
+      };
+
+      vi.spyOn(occurrenceService, 'search').mockResolvedValue(largeResult);
+
+      const result: any = await tool.execute({ taxonKey: 1, limit: 300 });
+
+      expect(result.truncated).toBe(true);
+      expect(result.metadata).toBeDefined();
+      expect(result.metadata.returnedCount).toBeDefined();
+      expect(result.message).toMatch(/exceeds|limit/i);
+    });
+  });
 });

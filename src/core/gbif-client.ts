@@ -190,6 +190,21 @@ export class GBIFClient {
         logger.debug('Making GBIF API request', { path, params });
         const response = await this.client.get<T>(path, { params });
 
+        // Check response size and log warnings
+        const responseSize = JSON.stringify(response.data).length;
+        if (config.responseLimits.enableSizeLogging && responseSize > config.responseLimits.warnSizeBytes) {
+          logger.warn('Large GBIF response detected', {
+            path,
+            params,
+            sizeBytes: responseSize,
+            sizeKB: Math.round(responseSize / 1024),
+            exceedsLimit: responseSize > config.responseLimits.maxSizeBytes,
+            recommendation: responseSize > config.responseLimits.maxSizeBytes
+              ? 'Response exceeds limit and will be truncated. Consider using smaller limit parameter.'
+              : 'Response approaching limit. Consider pagination for larger datasets.'
+          });
+        }
+
         // Record success with circuit breaker
         this.circuitBreaker.recordSuccess();
 

@@ -616,3 +616,49 @@ export interface ValidationIssue {
   count?: number;
   sample?: any[];
 }
+
+/**
+ * Response that has been truncated due to size limits
+ */
+export interface TruncatedResponse<T> {
+  truncated: true;
+  originalSize: string;      // "1.2MB"
+  returnedSize: string;      // "248KB"
+  limit: string;             // "250KB"
+  message: string;           // Helpful guidance message
+  metadata: {
+    totalCount?: number;     // Total results available
+    returnedCount: number;   // Results included in response
+    offset?: number;         // Current offset
+    limit?: number;          // Current limit parameter
+  };
+  data: T;                   // Partial data that fits under limit
+  pagination?: {
+    suggestion: string;      // Human-readable pagination advice
+    example: Record<string, any>; // Concrete params to use
+  };
+}
+
+/**
+ * Metrics about response size for monitoring
+ */
+export interface ResponseSizeMetrics {
+  sizeBytes: number;
+  sizeKB: number;
+  sizeMB?: number;
+  exceedsLimit: boolean;
+  exceedsWarning: boolean;
+  truncated: boolean;
+}
+
+/**
+ * Type guard to check if response has pagination
+ */
+export function isPaginatedResponse(data: any): data is { results: any[]; count?: number; offset?: number; limit?: number } {
+  return (
+    data &&
+    typeof data === 'object' &&
+    Array.isArray(data.results) &&
+    'count' in data
+  );
+}

@@ -2,6 +2,9 @@ import { ZodSchema } from 'zod';
 import { zodToJsonSchema as convertZodToJsonSchema } from 'zod-to-json-schema';
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { logger } from '../utils/logger.js';
+import { ResponseTruncator } from '../utils/response-truncator.js';
+import { config } from '../config/config.js';
+import type { TruncatedResponse } from '../types/gbif.types.js';
 
 /**
  * Base class for all GBIF MCP tools
@@ -11,6 +14,12 @@ export abstract class BaseTool<TInput = any, TOutput = any> {
   protected abstract readonly description: string;
   protected abstract readonly inputSchema: ZodSchema<TInput>;
   protected readonly outputSchema?: ZodSchema<TOutput>;
+
+  private readonly truncator: ResponseTruncator;
+
+  constructor() {
+    this.truncator = new ResponseTruncator();
+  }
 
   /**
    * Get MCP tool definition
@@ -35,11 +44,17 @@ export abstract class BaseTool<TInput = any, TOutput = any> {
       const result = await this.run(validatedInput);
 
       // Validate output if schema is defined
-      if (this.outputSchema) {
-        return this.validateOutput(result);
-      }
+      const validatedResult = this.outputSchema
+        ? this.validateOutput(result)
+        : result;
 
-      return result;
+      // Apply size limiting
+      const truncatedResult = this.truncateIfNeeded(
+        validatedResult,
+        validatedInput as Record<string, any>
+      );
+
+      return truncatedResult as TOutput;
     } catch (error) {
       logger.error(`Tool execution failed: ${this.name}`, { error, input });
       throw this.transformError(error);
@@ -76,6 +91,46 @@ export abstract class BaseTool<TInput = any, TOutput = any> {
       logger.error(`Output validation failed for ${this.name}`, { error, output });
       throw new Error(`Invalid output from ${this.name}: ${(error as any).message}`);
     }
+  }
+
+  /**
+   * Truncate response if it exceeds size limits
+   */
+  protected truncateIfNeeded<T>(
+    data: T,
+    originalParams?: Record<string, any>
+  ): T | TruncatedResponse<T> {
+    if (!config.responseLimits.enableTruncation) {
+      return data;
+    }
+
+    const sizeBytes = this.truncator.calculateSize(data);
+
+    if (!this.truncator.needsTruncation(data)) {
+      if (config.responseLimits.enableSizeLogging) {
+        logger.debug('Response within size limits', {
+          tool: this.name,
+          sizeKB: Math.round(sizeBytes / 1024)
+        });
+      }
+      return data;
+    }
+
+    logger.warn('Response exceeds size limit, truncating', {
+      tool: this.name,
+      originalSize: ResponseTruncator.formatSize(sizeBytes),
+      limit: ResponseTruncator.formatSize(config.responseLimits.maxSizeBytes)
+    });
+
+    // Check if this is a paginated GBIF response
+    const isPaginated = (data as any)?.results && Array.isArray((data as any).results);
+
+    if (isPaginated) {
+      return this.truncator.truncatePaginatedResponse(data as any, originalParams || {}) as any;
+    }
+
+    // For non-paginated, return metadata only
+    return this.truncator.createMetadataOnlyResponse(data, sizeBytes) as any;
   }
 
   /**

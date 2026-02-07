@@ -18,5 +18,7 @@ export default defineConfig({
     },
     include: ['tests/**/*.test.ts', 'tests/**/*.spec.ts'],
     exclude: ['node_modules', 'build'],
+    testTimeout: 10000, // 10s default for integration tests
+    hookTimeout: 10000,
   },
 });
