@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { BaseTool } from '../base-tool.js';
+import type { ToolAnnotations } from '@modelcontextprotocol/server';
 import { ValidatorService } from '../../services/validator/validator.service.js';
 
 /**
@@ -8,6 +9,14 @@ import { ValidatorService } from '../../services/validator/validator.service.js'
 export class ValidatorValidateTabularTool extends BaseTool<{ fileUrl: string; fileType?: string }, any> {
   protected readonly name = 'gbif_validator_validate_tabular';
   protected readonly description = 'Validate tabular data files (CSV, TSV) against Darwin Core standards before creating archives. Checks column headers, data types, required fields, and format compliance. Useful for data preparation workflows, pre-publication validation, and quality assurance before creating Darwin Core Archives. Returns validation report with field-level issues.';
+
+  /** Creates a server-side job on GBIF: not read-only, and repeat calls create new jobs. */
+  protected readonly annotations: ToolAnnotations = {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: true,
+  };
 
   protected readonly inputSchema = z.object({
     fileUrl: z.string().url().describe(

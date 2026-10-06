@@ -5,14 +5,20 @@
  *
  * Production-ready MCP server that provides programmatic access to GBIF API
  * with comprehensive error handling, correlation tracking, and monitoring.
+ *
+ * Speaks MCP protocol revision 2026-07-28 (stateless requests, `server/discover`,
+ * cacheable `tools/list`) via the v2 TypeScript SDK, and keeps serving 2025-era
+ * clients that still open with the `initialize` handshake.
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+  McpServer,
+  fromJsonSchema,
+  type CallToolResult,
+  type JsonSchemaType,
+} from '@modelcontextprotocol/server';
+import { serveStdio, type StdioServerHandle } from '@modelcontextprotocol/server/stdio';
+import { AjvJsonSchemaValidator } from '@modelcontextprotocol/server/validators/ajv';
 import { config } from './config/config.js';
 import { logger } from './utils/logger.js';
 import { GBIFClient } from './core/gbif-client.js';
@@ -130,10 +136,10 @@ interface ServerStats {
  * Main GBIF MCP Server
  */
 class GBIFMCPServer {
-  private server: Server;
   private client: GBIFClient;
   private toolRegistry: ToolRegistry;
-  private transport?: StdioServerTransport;
+  private readonly schemaValidator = new AjvJsonSchemaValidator();
+  private stdioHandle?: StdioServerHandle;
   private stats: ServerStats;
   private isShuttingDown = false;
 
@@ -147,20 +153,6 @@ class GBIFMCPServer {
       toolExecutions: new Map(),
     };
 
-    // Create MCP server
-    this.server = new Server(
-      {
-        name: config.server.name,
-        version: config.server.version,
-      },
-      {
-        capabilities: {
-          tools: {},
-          // Resources and prompts can be added here in future phases
-        },
-      }
-    );
-
     // Initialize GBIF client
     this.client = new GBIFClient();
 
@@ -169,7 +161,6 @@ class GBIFMCPServer {
 
     // Setup server components
     this.initializeServices();
-    this.setupHandlers();
     this.setupErrorHandlers();
 
     logger.info('GBIF MCP Server initialized', {
@@ -287,157 +278,177 @@ class GBIFMCPServer {
   }
 
   /**
-   * Setup MCP protocol request handlers
+   * Build a fresh MCP server instance exposing every registered tool.
+   *
+   * The stdio entry (`serveStdio`) calls this factory once per connection after the
+   * opening message has selected the protocol era, so a single tool set serves both
+   * 2026-07-28 clients and 2025-era clients.
    */
-  private setupHandlers(): void {
-    // Handle list tools request
-    this.server.setRequestHandler(
-      ListToolsRequestSchema,
-      async () => {
-        return RequestHandler.withContext('ListTools', async (context) => {
-          this.stats.requestCount++;
-
-          try {
-            const tools = this.toolRegistry
-              .getAll()
-              .map(tool => tool.getDefinition());
-
-            logger.debug('Tools listed', {
-              correlationId: context.correlationId,
-              count: tools.length,
-            });
-
-            this.stats.successCount++;
-
-            return { tools };
-          } catch (error) {
-            this.stats.errorCount++;
-            logger.error('List tools failed', {
-              correlationId: context.correlationId,
-              error,
-            });
-            throw error;
-          }
-        });
+  createMcpServer(): McpServer {
+    const mcpServer = new McpServer(
+      {
+        name: config.server.name,
+        version: config.server.version,
+        title: 'GBIF Biodiversity Data',
+        websiteUrl: 'https://github.com/tyson-swetnam/gbif-mcp',
+      },
+      {
+        capabilities: {
+          tools: {},
+          // Resources and prompts can be added here in future phases
+        },
+        instructions: [
+          'Tools for querying the Global Biodiversity Information Facility (GBIF) API:',
+          'species (taxonomy), occurrences, registry (datasets/organizations/collections),',
+          'maps, literature, vocabularies and data validation.',
+          'Results are paginated with `offset`/`limit` and an `endOfRecords` flag;',
+          'large responses are truncated to the configured size limit with guidance on how to page.',
+          'Only download requests need GBIF credentials.',
+        ].join(' '),
+        // The tool catalogue is static for the lifetime of the process.
+        cacheHints: {
+          'tools/list': { ttlMs: 60 * 60 * 1000, cacheScope: 'public' },
+        },
       }
     );
 
-    // Handle call tool request
-    this.server.setRequestHandler(
-      CallToolRequestSchema,
-      async (request) => {
-        const { name, arguments: args } = request.params;
+    for (const tool of this.toolRegistry.getAll()) {
+      const definition = tool.getDefinition();
+      mcpServer.registerTool(
+        definition.name,
+        {
+          description: definition.description,
+          inputSchema: fromJsonSchema<Record<string, unknown>>(
+            definition.inputSchema as JsonSchemaType,
+            this.schemaValidator
+          ),
+          annotations: definition.annotations,
+        },
+        async (args) => this.handleToolCall(definition.name, args)
+      );
+    }
 
-        return RequestHandler.withContext(
-          'CallTool',
-          async (context) => {
-            this.stats.requestCount++;
+    mcpServer.server.onerror = (error) => {
+      logger.error('MCP Server error', {
+        error: error.message,
+        name: error.name,
+        stack: error.stack,
+      });
+      this.stats.errorCount++;
+    };
 
-            // Update tool execution count
-            const currentCount = this.stats.toolExecutions.get(name) || 0;
-            this.stats.toolExecutions.set(name, currentCount + 1);
+    logger.info('Protocol handlers configured', {
+      tools: this.toolRegistry.getAll().length,
+    });
 
-            logger.info('Tool invocation started', {
+    return mcpServer;
+  }
+
+  /**
+   * Execute a tool call with correlation tracking, statistics and error formatting.
+   */
+  private handleToolCall(name: string, args: Record<string, unknown> | undefined): Promise<CallToolResult> {
+    return RequestHandler.withContext(
+      'CallTool',
+      async (context): Promise<CallToolResult> => {
+        this.stats.requestCount++;
+
+        // Update tool execution count
+        const currentCount = this.stats.toolExecutions.get(name) || 0;
+        this.stats.toolExecutions.set(name, currentCount + 1);
+
+        logger.info('Tool invocation started', {
+          correlationId: context.correlationId,
+          tool: name,
+          hasArgs: !!args,
+        });
+
+        try {
+          // Check if tool exists
+          const tool = this.toolRegistry.get(name);
+          if (!tool) {
+            throw new MCPError(
+              MCPErrorCode.TOOL_NOT_FOUND,
+              `Tool not found: ${name}`,
+              { availableTools: this.toolRegistry.getAll().map(t => t.getDefinition().name) }
+            );
+          }
+
+          // Check circuit breaker state
+          const circuitState = this.client.getCircuitState();
+          if (circuitState === 'OPEN') {
+            throw new MCPError(
+              MCPErrorCode.CIRCUIT_BREAKER_OPEN,
+              'Service temporarily unavailable due to high error rate',
+              { circuitState }
+            );
+          }
+
+          // Execute tool
+          const result = await tool.execute(args || {});
+
+          // Final size check before returning
+          const resultStr = JSON.stringify(result, null, 2);
+          if (resultStr.length > config.responseLimits.maxSizeBytes) {
+            logger.error('Tool result exceeds size limit after truncation', {
               correlationId: context.correlationId,
               tool: name,
-              hasArgs: !!args,
+              size: resultStr.length,
+              limit: config.responseLimits.maxSizeBytes
             });
 
-            try {
-              // Check if tool exists
-              const tool = this.toolRegistry.get(name);
-              if (!tool) {
-                throw new MCPError(
-                  MCPErrorCode.TOOL_NOT_FOUND,
-                  `Tool not found: ${name}`,
-                  { availableTools: this.toolRegistry.getAll().map(t => t.getDefinition().name) }
-                );
-              }
+            return {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  error: 'Response too large',
+                  size: `${Math.round(resultStr.length / 1024)}KB`,
+                  limit: `${Math.round(config.responseLimits.maxSizeBytes / 1024)}KB`,
+                  suggestion: 'Use smaller limit parameter or add more filters to narrow your search. The response exceeded limits even after automatic truncation.'
+                }, null, 2)
+              }],
+              isError: true,
+            };
+          }
 
-              // Check circuit breaker state
-              const circuitState = this.client.getCircuitState();
-              if (circuitState === 'OPEN') {
-                throw new MCPError(
-                  MCPErrorCode.CIRCUIT_BREAKER_OPEN,
-                  'Service temporarily unavailable due to high error rate',
-                  { circuitState }
-                );
-              }
+          this.stats.successCount++;
 
-              // Execute tool
-              const result = await tool.execute(args || {});
+          logger.info('Tool execution successful', {
+            correlationId: context.correlationId,
+            tool: name,
+            duration: Date.now() - context.startTime,
+          });
 
-              // Final size check before returning
-              const resultStr = JSON.stringify(result, null, 2);
-              if (resultStr.length > config.responseLimits.maxSizeBytes) {
-                logger.error('Tool result exceeds size limit after truncation', {
-                  correlationId: context.correlationId,
-                  tool: name,
-                  size: resultStr.length,
-                  limit: config.responseLimits.maxSizeBytes
-                });
+          return {
+            content: [
+              {
+                type: 'text',
+                text: resultStr,
+              },
+            ],
+          };
+        } catch (error) {
+          this.stats.errorCount++;
 
-                return {
-                  content: [{
-                    type: 'text',
-                    text: JSON.stringify({
-                      error: 'Response too large',
-                      size: `${Math.round(resultStr.length / 1024)}KB`,
-                      limit: '250KB',
-                      suggestion: 'Use smaller limit parameter or add more filters to narrow your search. The response exceeded limits even after automatic truncation.'
-                    }, null, 2)
-                  }]
-                };
-              }
+          logger.error('Tool execution failed', {
+            correlationId: context.correlationId,
+            tool: name,
+            duration: Date.now() - context.startTime,
+            error,
+          });
 
-              this.stats.successCount++;
-
-              logger.info('Tool execution successful', {
-                correlationId: context.correlationId,
-                tool: name,
-                duration: Date.now() - context.startTime,
-              });
-
-              return {
-                content: [
-                  {
-                    type: 'text',
-                    text: resultStr,
-                  },
-                ],
-              };
-            } catch (error) {
-              this.stats.errorCount++;
-
-              logger.error('Tool execution failed', {
-                correlationId: context.correlationId,
-                tool: name,
-                duration: Date.now() - context.startTime,
-                error,
-              });
-
-              // Format error response
-              return MCPErrorFormatter.formatToolError(error as Error, name);
-            }
-          },
-          { toolName: name }
-        );
-      }
+          // Format error response
+          return MCPErrorFormatter.formatToolError(error as Error, name);
+        }
+      },
+      { toolName: name }
     );
-
-    logger.info('Protocol handlers configured');
   }
 
   /**
    * Setup error handlers for the server
    */
   private setupErrorHandlers(): void {
-    // Handle server errors
-    this.server.onerror = (error) => {
-      logger.error('MCP Server error', { error });
-      this.stats.errorCount++;
-    };
-
     // Handle unhandled protocol errors
     process.on('uncaughtException', (error) => {
       logger.error('Uncaught exception', {
@@ -468,9 +479,6 @@ class GBIFMCPServer {
     }
 
     try {
-      // Create stdio transport
-      this.transport = new StdioServerTransport();
-
       logger.info('Starting GBIF MCP Server', {
         version: config.server.version,
         tools: this.toolRegistry.getAll().length,
@@ -482,13 +490,29 @@ class GBIFMCPServer {
         },
       });
 
-      // Connect server to transport
-      await this.server.connect(this.transport);
+      // Serve over stdio. The entry owns protocol-era negotiation: a 2026-07-28
+      // client (stateless `_meta` envelope / `server/discover`) and a 2025-era
+      // client (`initialize` handshake) are both served from the same factory.
+      this.stdioHandle = serveStdio(() => this.createMcpServer(), {
+        legacy: config.server.legacyClients,
+        onerror: (error) => {
+          logger.error('MCP stdio transport error', {
+            error: error.message,
+            name: error.name,
+            stack: error.stack,
+          });
+          this.stats.errorCount++;
+        },
+      });
 
       logger.info('GBIF MCP Server started successfully', {
         serverName: config.server.name,
         version: config.server.version,
         transport: 'stdio',
+        protocol: {
+          latest: '2026-07-28',
+          legacyClients: config.server.legacyClients,
+        },
         capabilities: {
           tools: this.toolRegistry.getAll().length,
         },
@@ -556,8 +580,8 @@ class GBIFMCPServer {
       // Log final statistics
       this.logStatistics();
 
-      // Close server connection
-      await this.server.close();
+      // Close server connection and stdio transport
+      await this.stdioHandle?.close();
 
       logger.info('GBIF MCP Server shutdown complete');
     } catch (error) {

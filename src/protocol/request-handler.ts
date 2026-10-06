@@ -76,7 +76,7 @@ export class RequestHandler {
     executor: (context: RequestContext) => Promise<T>,
     args?: any
   ): Promise<{
-    content: Array<{ type: string; text: string }>;
+    content: Array<{ type: 'text'; text: string }>;
     isError?: boolean;
   }> {
     try {
@@ -89,7 +89,7 @@ export class RequestHandler {
       return {
         content: [
           {
-            type: 'text',
+            type: 'text' as const,
             text: JSON.stringify(result, null, 2),
           },
         ],

@@ -15,7 +15,7 @@ const ConfigSchema = z.object({
     baseUrl: z.string().url().default('https://api.gbif.org/v1'),
     username: z.string().optional(),
     password: z.string().optional(),
-    userAgent: z.string().default('GBIF-MCP-Server/1.0.0'),
+    userAgent: z.string().default('GBIF-MCP-Server/1.1.0'),
     timeout: z.number().default(30000),
     retryAttempts: z.number().default(3),
     retryDelay: z.number().default(1000),
@@ -55,8 +55,12 @@ const ConfigSchema = z.object({
   // Server Configuration
   server: z.object({
     name: z.string().default('gbif-mcp-server'),
-    version: z.string().default('1.0.0'),
+    version: z.string().default('1.1.0'),
     description: z.string().default('MCP server for GBIF biodiversity data'),
+    // How 2025-era clients (those that open with `initialize`) are handled by the
+    // 2026-07-28 stdio entry: 'serve' keeps full backwards compatibility, 'reject'
+    // answers them with an unsupported-protocol-version error.
+    legacyClients: z.enum(['serve', 'reject']).default('serve'),
   }),
 
   // Feature Flags
@@ -111,6 +115,7 @@ const parseConfig = () => {
       name: process.env.SERVER_NAME,
       version: process.env.SERVER_VERSION,
       description: process.env.SERVER_DESCRIPTION,
+      legacyClients: process.env.MCP_LEGACY_CLIENTS,
     },
     features: {
       enableAuthentication: process.env.ENABLE_AUTH === 'true',

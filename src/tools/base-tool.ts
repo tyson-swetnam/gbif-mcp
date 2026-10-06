@@ -1,6 +1,6 @@
 import { ZodSchema } from 'zod';
 import { zodToJsonSchema as convertZodToJsonSchema } from 'zod-to-json-schema';
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import type { Tool, ToolAnnotations } from '@modelcontextprotocol/server';
 import { logger } from '../utils/logger.js';
 import { ResponseTruncator } from '../utils/response-truncator.js';
 import { config } from '../config/config.js';
@@ -15,6 +15,18 @@ export abstract class BaseTool<TInput = any, TOutput = any> {
   protected abstract readonly inputSchema: ZodSchema<TInput>;
   protected readonly outputSchema?: ZodSchema<TOutput>;
 
+  /**
+   * MCP tool annotations (behavioral hints for clients). Every GBIF tool is a
+   * read-only query against a public, open-world API unless a subclass says
+   * otherwise (e.g. tools that create download or validation jobs).
+   */
+  protected readonly annotations: ToolAnnotations = {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: true,
+  };
+
   private readonly truncator: ResponseTruncator;
 
   constructor() {
@@ -28,7 +40,8 @@ export abstract class BaseTool<TInput = any, TOutput = any> {
     return {
       name: this.name,
       description: this.description,
-      inputSchema: this.zodToJsonSchema(this.inputSchema),
+      inputSchema: this.zodToJsonSchema(this.inputSchema) as Tool['inputSchema'],
+      annotations: this.annotations,
     };
   }
 
@@ -165,11 +178,20 @@ export abstract class BaseTool<TInput = any, TOutput = any> {
    * Convert Zod schema to JSON Schema for MCP
    */
   protected zodToJsonSchema(schema: ZodSchema): any {
-    // Use the proper zod-to-json-schema library for accurate conversion
-    return convertZodToJsonSchema(schema, {
+    // Use the proper zod-to-json-schema library for accurate conversion.
+    // - `$refStrategy: 'none'` inlines every definition (no `$ref` resolution needed by clients).
+    // - `removeAdditionalStrategy: 'strict'` only emits `additionalProperties: false` for
+    //   `.strict()` objects, matching Zod's default "strip unknown keys" behaviour so that
+    //   clients sending extra arguments are not rejected by the SDK's JSON Schema validation.
+    const { $schema: _dialect, ...jsonSchema } = convertZodToJsonSchema(schema, {
       target: 'jsonSchema7',
       $refStrategy: 'none',
-    });
+      removeAdditionalStrategy: 'strict',
+    }) as Record<string, any>;
+    // MCP 2026-07-28 tool schemas are JSON Schema 2020-12; the draft-07 `$schema` marker emitted
+    // by zod-to-json-schema is dropped (the keywords used here are identical in both dialects).
+    void _dialect;
+    return jsonSchema;
   }
 
   /**

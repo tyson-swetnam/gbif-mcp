@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { BaseTool } from '../base-tool.js';
+import type { ToolAnnotations } from '@modelcontextprotocol/server';
 import { ValidatorService } from '../../services/validator/validator.service.js';
 
 /**
@@ -8,6 +9,14 @@ import { ValidatorService } from '../../services/validator/validator.service.js'
 export class ValidatorValidateDwcaTool extends BaseTool<{ fileUrl: string }, any> {
   protected readonly name = 'gbif_validator_validate_dwca';
   protected readonly description = 'Validate a Darwin Core Archive (DwC-A) file against GBIF standards. Checks data structure, required fields, data quality, and format compliance. Returns validation report with issues, warnings, and recommendations. Essential before publishing datasets to GBIF.';
+
+  /** Creates a server-side job on GBIF: not read-only, and repeat calls create new jobs. */
+  protected readonly annotations: ToolAnnotations = {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: true,
+  };
 
   protected readonly inputSchema = z.object({
     fileUrl: z.string().url().describe(

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { BaseTool } from '../base-tool.js';
+import type { ToolAnnotations } from '@modelcontextprotocol/server';
 import { OccurrenceService } from '../../services/occurrence/occurrence.service.js';
 import type { OccurrenceDownloadRequest, DownloadPredicate } from '../../types/gbif.types.js';
 
@@ -9,6 +10,14 @@ import type { OccurrenceDownloadRequest, DownloadPredicate } from '../../types/g
 export class OccurrenceDownloadTool extends BaseTool<any, string> {
   protected readonly name = 'gbif_occurrence_download_request';
   protected readonly description = 'Request an asynchronous download for large occurrence datasets beyond pagination limits (100,000+ records). Returns a download key for checking status. REQUIRES AUTHENTICATION: Set GBIF_USERNAME and GBIF_PASSWORD environment variables.';
+
+  /** Creates a server-side job on GBIF: not read-only, and repeat calls create new jobs. */
+  protected readonly annotations: ToolAnnotations = {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: true,
+  };
 
   protected readonly inputSchema = z.object({
     creator: z.string().min(1).describe('GBIF username (creator of the download). This is your GBIF.org username. Example: "john.smith". Required for download attribution and access control.'),
