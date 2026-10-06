@@ -91,7 +91,7 @@ describe('RegistryService', () => {
       };
 
       server.use(
-        http.get('http://localhost:3000/organization/search', () => {
+        http.get('http://localhost:3000/organization', () => {
           return HttpResponse.json(mockResponse);
         })
       );
@@ -117,7 +117,7 @@ describe('RegistryService', () => {
       };
 
       server.use(
-        http.get('http://localhost:3000/network/search', () => {
+        http.get('http://localhost:3000/network', () => {
           return HttpResponse.json(mockResponse);
         })
       );

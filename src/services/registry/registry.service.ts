@@ -157,7 +157,13 @@ export class RegistryService {
         throw new Error('Invalid dataset key: must be a valid UUID');
       }
 
-      const document = await this.client.get<string>(`${this.datasetPath}/${key}/document`);
+      // The EML document endpoint only serves XML; the client's default `Accept: application/json`
+      // is answered with 406 Not Acceptable.
+      const document = await this.client.get<string>(
+        `${this.datasetPath}/${key}/document`,
+        undefined,
+        { headers: { Accept: 'application/xml' }, responseType: 'text' }
+      );
 
       logger.info('Dataset EML document retrieved', { key });
 
@@ -193,7 +199,7 @@ export class RegistryService {
       const searchParams = this.sanitizeOrganizationSearchParams(params);
 
       const response = await this.client.get<GBIFResponse<Organization>>(
-        `${this.organizationPath}/search`,
+        this.organizationPath,
         searchParams
       );
 
@@ -323,7 +329,7 @@ export class RegistryService {
       const searchParams = this.sanitizeNetworkSearchParams(params);
 
       const response = await this.client.get<GBIFResponse<Network>>(
-        `${this.networkPath}/search`,
+        this.networkPath,
         searchParams
       );
 
@@ -498,7 +504,7 @@ export class RegistryService {
       logger.info('Searching installations', { params });
 
       const response = await this.client.get<GBIFResponse<any>>(
-        '/installation/search',
+        '/installation',
         params
       );
 

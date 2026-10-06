@@ -63,15 +63,27 @@ describe('LiteratureService', () => {
         doi: '10.1234/test',
       };
 
+      let requestedDoi: string | null = null;
       server.use(
-        http.get('http://localhost:3000/literature/:doi', ({ params }) => {
-          // Match any DOI pattern
-          return HttpResponse.json(mockLiterature);
+        http.get('http://localhost:3000/literature/search', ({ request }) => {
+          requestedDoi = new URL(request.url).searchParams.get('doi');
+          return HttpResponse.json({ offset: 0, limit: 1, endOfRecords: true, count: 1, results: [mockLiterature] });
         })
       );
 
-      const result = await service.getByDoi('10.1234/test');
+      const result = await service.getByDoi('https://doi.org/10.1234/test');
+      expect(requestedDoi).toBe('10.1234/test');
       expect(result.title).toBe('Biodiversity Study');
+    });
+
+    it('should raise a 404-style error when the DOI is unknown', async () => {
+      server.use(
+        http.get('http://localhost:3000/literature/search', () => {
+          return HttpResponse.json({ offset: 0, limit: 1, endOfRecords: true, count: 0, results: [] });
+        })
+      );
+
+      await expect(service.getByDoi('10.9999/nope')).rejects.toMatchObject({ statusCode: 404 });
     });
   });
 });

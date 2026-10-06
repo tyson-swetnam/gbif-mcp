@@ -8,10 +8,10 @@ import type { OccurrenceSearchParams } from '../../types/gbif.types.js';
  */
 export class OccurrenceCountsByTaxonTool extends BaseTool<OccurrenceSearchParams, Record<string, number>> {
   protected readonly name = 'gbif_occurrence_counts_by_taxon';
-  protected readonly description = 'Get occurrence counts broken down by taxon key for taxonomic composition analysis. Returns counts per child taxon showing species-level distribution. Useful for understanding biodiversity patterns, identifying dominant species, and analyzing taxonomic coverage within a higher taxon. Fast statistics for ecological analysis.';
+  protected readonly description = 'Get occurrence counts broken down by species (GBIF backbone speciesKey) for taxonomic composition analysis. Returns counts per species within the filtered taxon, most frequent first (top 100). Useful for understanding biodiversity patterns, identifying dominant species, and analyzing taxonomic coverage within a higher taxon. Fast statistics for ecological analysis.';
 
   protected readonly inputSchema = z.object({
-    taxonKey: z.number().optional().describe('Parent taxon to analyze. Example: 359 (genus Quercus) returns counts for each oak species'),
+    taxonKey: z.number().optional().describe('Parent taxon to analyze. Example: 2877951 (genus Quercus) returns counts for each oak species'),
     country: z.string().length(2).optional().describe('Filter by country'),
     year: z.string().optional().describe('Filter by year or range'),
     datasetKey: z.string().optional().describe('Filter to specific dataset'),

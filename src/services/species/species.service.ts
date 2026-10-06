@@ -618,7 +618,8 @@ export class SpeciesService {
         throw new Error('At least one name is required for parsing');
       }
 
-      const response = await this.client.post<any[]>(`${this.basePath}/parser/name`, names);
+      // The name parser lives at the API root (`/parser/name`), not under `/species`.
+      const response = await this.client.post<any[]>('/parser/name', names);
 
       logger.info('Names parsed successfully', {
         count: response.length,

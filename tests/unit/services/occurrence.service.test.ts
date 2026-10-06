@@ -202,4 +202,39 @@ describe('OccurrenceService', () => {
       await expect(service.getDownloadStatus('')).rejects.toThrow('Download key is required');
     });
   });
+
+  describe('facet counts', () => {
+    it('should derive counts-by-field from a faceted occurrence search honouring filters', async () => {
+      let url: URL | null = null;
+      server.use(
+        http.get('http://localhost:3000/occurrence/search', ({ request }) => {
+          url = new URL(request.url);
+          return HttpResponse.json({
+            offset: 0, limit: 0, endOfRecords: true, count: 3,
+            results: [],
+            facets: [{ field: 'BASIS_OF_RECORD', counts: [
+              { name: 'HUMAN_OBSERVATION', count: 2 },
+              { name: 'PRESERVED_SPECIMEN', count: 1 },
+            ] }],
+          });
+        })
+      );
+
+      const counts = await service.getCountsByBasisOfRecord({ taxonKey: 2435099, country: 'US' });
+      expect(counts).toEqual({ HUMAN_OBSERVATION: 2, PRESERVED_SPECIMEN: 1 });
+      expect(url!.searchParams.get('facet')).toBe('basisOfRecord');
+      expect(url!.searchParams.get('limit')).toBe('0');
+      expect(url!.searchParams.get('taxonKey')).toBe('2435099');
+      expect(url!.searchParams.get('country')).toBe('US');
+    });
+
+    it('should return an empty map when the search has no facets', async () => {
+      server.use(
+        http.get('http://localhost:3000/occurrence/search', () => {
+          return HttpResponse.json({ offset: 0, limit: 0, endOfRecords: true, count: 0, results: [] });
+        })
+      );
+      expect(await service.getCountsByYear({ taxonKey: 1 })).toEqual({});
+    });
+  });
 });

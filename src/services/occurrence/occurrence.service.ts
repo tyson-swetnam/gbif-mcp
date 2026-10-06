@@ -521,17 +521,49 @@ export class OccurrenceService {
   }
 
   /**
+   * Count occurrences grouped by one field, honouring every search filter.
+   *
+   * GBIF's dedicated `/occurrence/counts/*` endpoints have been retired or only accept a
+   * fixed set of parameters (e.g. `/counts/year` ignores `taxonKey`), so every "counts by"
+   * tool is implemented on top of the faceted occurrence search instead:
+   * `GET /occurrence/search?limit=0&facet=<field>&facetLimit=<n>&...filters`.
+   *
+   * Returns a `{ value: count }` map ordered by descending count, matching the
+   * shape of the former count endpoints.
+   */
+  private async getFacetCounts(
+    facet: string,
+    params: OccurrenceSearchParams,
+    facetLimit: number
+  ): Promise<Record<string, number>> {
+    const searchParams = {
+      ...this.sanitizeSearchParams(params),
+      limit: 0,
+      offset: 0,
+      facet,
+      facetLimit,
+    };
+
+    const response = await this.client.get<{
+      count?: number;
+      facets?: Array<{ field: string; counts: Array<{ name: string; count: number }> }>;
+    }>(`${this.basePath}/search`, searchParams);
+
+    const counts: Record<string, number> = {};
+    for (const entry of response.facets?.[0]?.counts ?? []) {
+      counts[entry.name] = entry.count;
+    }
+    return counts;
+  }
+
+  /**
    * Get occurrence counts by basis of record
    */
   async getCountsByBasisOfRecord(params: OccurrenceSearchParams = {}): Promise<Record<string, number>> {
     try {
       logger.info('Getting occurrence counts by basis of record', { params });
 
-      const searchParams = this.sanitizeSearchParams(params);
-      const response = await this.client.get<Record<string, number>>(
-        `${this.basePath}/counts/basisOfRecord`,
-        searchParams
-      );
+      const response = await this.getFacetCounts('basisOfRecord', params, 20);
 
       logger.info('Basis of record counts retrieved', {
         recordTypes: Object.keys(response).length,
@@ -551,11 +583,7 @@ export class OccurrenceService {
     try {
       logger.info('Getting occurrence counts by year', { params });
 
-      const searchParams = this.sanitizeSearchParams(params);
-      const response = await this.client.get<Record<string, number>>(
-        `${this.basePath}/counts/year`,
-        searchParams
-      );
+      const response = await this.getFacetCounts('year', params, 1000);
 
       logger.info('Year counts retrieved', {
         years: Object.keys(response).length,
@@ -575,11 +603,7 @@ export class OccurrenceService {
     try {
       logger.info('Getting occurrence counts by country', { params });
 
-      const searchParams = this.sanitizeSearchParams(params);
-      const response = await this.client.get<Record<string, number>>(
-        `${this.basePath}/counts/countries`,
-        searchParams
-      );
+      const response = await this.getFacetCounts('country', params, 300);
 
       logger.info('Country counts retrieved', {
         countries: Object.keys(response).length,
@@ -599,11 +623,7 @@ export class OccurrenceService {
     try {
       logger.info('Getting occurrence counts by publishing country', { params });
 
-      const searchParams = this.sanitizeSearchParams(params);
-      const response = await this.client.get<Record<string, number>>(
-        `${this.basePath}/counts/publishingCountries`,
-        searchParams
-      );
+      const response = await this.getFacetCounts('publishingCountry', params, 300);
 
       logger.info('Publishing country counts retrieved', {
         publishingCountries: Object.keys(response).length,
@@ -623,11 +643,7 @@ export class OccurrenceService {
     try {
       logger.info('Getting occurrence counts by dataset', { params });
 
-      const searchParams = this.sanitizeSearchParams(params);
-      const response = await this.client.get<Record<string, number>>(
-        `${this.basePath}/counts/datasets`,
-        searchParams
-      );
+      const response = await this.getFacetCounts('datasetKey', params, 100);
 
       logger.info('Dataset counts retrieved', {
         datasets: Object.keys(response).length,
@@ -654,11 +670,7 @@ export class OccurrenceService {
     try {
       logger.info('Getting occurrence counts by taxon', { params });
 
-      const searchParams = this.sanitizeSearchParams(params);
-      const response = await this.client.get<Record<string, number>>(
-        `${this.basePath}/counts/taxonKeys`,
-        searchParams
-      );
+      const response = await this.getFacetCounts('speciesKey', params, 100);
 
       logger.info('Taxon counts retrieved', {
         taxa: Object.keys(response).length,
@@ -678,11 +690,7 @@ export class OccurrenceService {
     try {
       logger.info('Getting occurrence counts by publishing organization', { params });
 
-      const searchParams = this.sanitizeSearchParams(params);
-      const response = await this.client.get<Record<string, number>>(
-        `${this.basePath}/counts/publishingOrganizations`,
-        searchParams
-      );
+      const response = await this.getFacetCounts('publishingOrg', params, 100);
 
       logger.info('Publishing organization counts retrieved', {
         organizations: Object.keys(response).length,
