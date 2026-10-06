@@ -22,6 +22,12 @@ The [Global Biodiversity Information Facility (GBIF)](https://www.gbif.org/) is 
 
 The [Model Context Protocol](https://modelcontextprotocol.io/) is an open protocol that standardizes how AI applications interact with external data sources and tools. This server implements MCP to make GBIF's biodiversity data accessible to AI assistants like Claude.
 
+## Protocol Support
+
+This server speaks **MCP protocol revision 2026-07-28** (the stateless revision: per-request `_meta` envelope, `server/discover`, cacheable `tools/list`, multi-round-trip results) using the v2 TypeScript SDK. Clients that still use the 2025-era `initialize` handshake (for example current Claude Desktop and Claude Code builds) are detected per connection and served unchanged, so no client configuration changes are needed. Set `MCP_LEGACY_CLIENTS=reject` to accept 2026-07-28 clients only.
+
+Requires **Node.js 20 or newer**.
+
 ## Quick Start
 
 ```bash
@@ -393,7 +399,7 @@ GBIF_PASSWORD=your-gbif-password
 
 # GBIF API Configuration (optional - defaults shown)
 GBIF_BASE_URL=https://api.gbif.org/v1
-GBIF_USER_AGENT=GBIF-MCP-Server/1.0.0
+GBIF_USER_AGENT=GBIF-MCP-Server/1.1.0
 GBIF_TIMEOUT=30000
 
 # Rate Limiting (optional - defaults shown)
@@ -408,6 +414,11 @@ CACHE_TTL=3600000
 # Logging (optional - defaults shown)
 LOG_LEVEL=info
 LOG_FORMAT=json
+
+# MCP protocol (optional - default shown)
+# serve  = also accept 2025-era clients that open with `initialize`
+# reject = only accept 2026-07-28 clients
+MCP_LEGACY_CLIENTS=serve
 ```
 
 **Note**: Most GBIF API endpoints do not require authentication. Credentials are only needed for:
@@ -437,7 +448,17 @@ claude chat "Use the gbif MCP server to search for Panthera leo"
 ```bash
 # Build and test the server directly
 npm run build
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | node build/index.js
+
+# 2026-07-28 client: every request carries the protocol envelope in _meta
+echo '{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{},"io.modelcontextprotocol/clientInfo":{"name":"manual","version":"0"}}}}' \
+  | node build/index.js
+
+# 2025-era client: classic initialize handshake, then tools/list
+printf '%s\n%s\n%s\n' \
+  '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"manual","version":"0"}}}' \
+  '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+  '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
+  | node build/index.js
 ```
 
 ## Available Tools
@@ -594,9 +615,9 @@ If you're being rate limited:
 
 ### Node.js Version
 
-Ensure you're using Node.js 18 or higher:
+Ensure you're using Node.js 20 or higher (required by the MCP SDK v2):
 ```bash
-node --version  # Should be v18.0.0 or higher
+node --version  # Should be v20.0.0 or higher
 ```
 
 ## API Coverage
@@ -617,8 +638,14 @@ This MCP server implements the following GBIF API sections:
 # Run in development mode
 npm run dev
 
-# Run tests
-npm test
+# Run unit tests (mocked GBIF API)
+npm run test:unit
+
+# Protocol conformance over stdio (2026-07-28 and legacy clients, official v2 client)
+npm run test:integration:protocol
+
+# Adversarial verification of every tool against the live GBIF API (needs network)
+npm run test:integration:api
 
 # Lint code
 npm run lint

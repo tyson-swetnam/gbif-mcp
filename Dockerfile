@@ -4,7 +4,7 @@ FROM node:20-alpine AS builder
 
 LABEL maintainer="Tyson Swetnam <tswetnam@arizona.edu>"
 LABEL description="GBIF MCP Server - Model Context Protocol server for GBIF biodiversity data"
-LABEL version="1.0.0"
+LABEL version="1.1.0"
 
 # Set working directory
 WORKDIR /app

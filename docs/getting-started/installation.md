@@ -4,7 +4,7 @@ Get the GBIF MCP Server up and running in minutes with your preferred installati
 
 ## Prerequisites
 
-- Node.js 18+ (LTS recommended)
+- Node.js 20+ (LTS recommended; required by the MCP SDK v2)
 - npm or yarn package manager
 - (Optional) Docker for containerized deployment
 
