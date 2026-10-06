@@ -69,6 +69,60 @@ describe('GBIFClient', () => {
       client.resetCircuitBreaker();
       expect(client.getCircuitState()).toBe('CLOSED');
     });
+
+    it('should NOT open on client errors (4xx) such as unknown keys', async () => {
+      server.use(
+        http.get('http://localhost:3000/species/:key', () => {
+          return HttpResponse.json({ message: 'Not found' }, { status: 404 });
+        }),
+        http.get('http://localhost:3000/bad', () => {
+          return HttpResponse.json({ message: 'Bad request' }, { status: 400 });
+        })
+      );
+
+      for (let i = 0; i < 8; i++) {
+        await expect(client.get(`/species/${999000 + i}`)).rejects.toMatchObject({ statusCode: 404 });
+        await expect(client.get('/bad')).rejects.toMatchObject({ statusCode: 400 });
+      }
+
+      expect(client.getCircuitState()).toBe('CLOSED');
+    });
+
+    it('should treat a 4xx answer as a healthy signal that resets the failure count', async () => {
+      let fail = true;
+      server.use(
+        http.get('http://localhost:3000/flaky', () => {
+          return fail
+            ? HttpResponse.json({ error: 'Server error' }, { status: 500 })
+            : HttpResponse.json({ message: 'Not found' }, { status: 404 });
+        })
+      );
+
+      for (let i = 0; i < 4; i++) {
+        await expect(client.get('/flaky')).rejects.toBeDefined();
+      }
+      fail = false;
+      await expect(client.get('/flaky')).rejects.toMatchObject({ statusCode: 404 });
+      fail = true;
+      for (let i = 0; i < 4; i++) {
+        await expect(client.get('/flaky')).rejects.toBeDefined();
+      }
+
+      expect(client.getCircuitState()).toBe('CLOSED');
+    }, 120000);
+
+    it('classifies service failures vs client errors', () => {
+      expect(GBIFClient.isServiceFailure({ statusCode: 500 })).toBe(true);
+      expect(GBIFClient.isServiceFailure({ statusCode: 503 })).toBe(true);
+      expect(GBIFClient.isServiceFailure({ statusCode: 429 })).toBe(true);
+      expect(GBIFClient.isServiceFailure({ statusCode: 408 })).toBe(true);
+      expect(GBIFClient.isServiceFailure({ error: 'ECONNRESET' })).toBe(true);
+      expect(GBIFClient.isServiceFailure(new Error('timeout'))).toBe(true);
+      expect(GBIFClient.isServiceFailure({ statusCode: 404 })).toBe(false);
+      expect(GBIFClient.isServiceFailure({ statusCode: 400 })).toBe(false);
+      expect(GBIFClient.isServiceFailure({ statusCode: 401 })).toBe(false);
+      expect(GBIFClient.isServiceFailure({ statusCode: 403 })).toBe(false);
+    });
   });
 
   describe('LRU Cache', () => {

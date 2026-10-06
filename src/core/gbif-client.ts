@@ -166,7 +166,11 @@ export class GBIFClient {
   /**
    * Make a GET request to GBIF API
    */
-  async get<T>(path: string, params?: Record<string, any>): Promise<T> {
+  async get<T>(
+    path: string,
+    params?: Record<string, any>,
+    options: { headers?: Record<string, string>; responseType?: 'json' | 'text' } = {}
+  ): Promise<T> {
     // Check circuit breaker
     if (!this.circuitBreaker.canRequest()) {
       const error = new Error('Circuit breaker is OPEN - service temporarily unavailable');
@@ -188,7 +192,11 @@ export class GBIFClient {
 
       try {
         logger.debug('Making GBIF API request', { path, params });
-        const response = await this.client.get<T>(path, { params });
+        const response = await this.client.get<T>(path, {
+          params,
+          headers: options.headers,
+          responseType: options.responseType,
+        });
 
         // Check response size and log warnings
         const responseSize = JSON.stringify(response.data).length;
@@ -215,12 +223,41 @@ export class GBIFClient {
 
         return response.data;
       } catch (error) {
-        // Record failure with circuit breaker
-        this.circuitBreaker.recordFailure();
+        this.recordOutcome(error);
         logger.error('GBIF API request failed', { path, params, error });
         throw error;
       }
     }) as Promise<T>;
+  }
+
+  /**
+   * Feed a failed request into the circuit breaker.
+   *
+   * Only failures that indicate the GBIF service itself is unhealthy (5xx, 429,
+   * 408, timeouts and network errors) count towards opening the circuit. A 4xx
+   * answer such as 404 for an unknown key or 400 for bad parameters proves the
+   * service is reachable and responding, so it is treated as a healthy signal:
+   * otherwise a handful of lookups for nonexistent identifiers would take the
+   * whole server offline for a minute.
+   */
+  private recordOutcome(error: unknown): void {
+    if (GBIFClient.isServiceFailure(error)) {
+      this.circuitBreaker.recordFailure();
+    } else {
+      this.circuitBreaker.recordSuccess();
+    }
+  }
+
+  /**
+   * Whether an error represents a service-side failure (as opposed to a client error).
+   */
+  static isServiceFailure(error: unknown): boolean {
+    const status = (error as GBIFError | undefined)?.statusCode;
+    if (typeof status === 'number') {
+      return status >= 500 || status === 429 || status === 408;
+    }
+    // No HTTP status: network error, timeout, aborted request, etc.
+    return true;
   }
 
   /**
@@ -235,6 +272,7 @@ export class GBIFClient {
         const response = await this.client.post<T>(path, data, { params });
         return response.data;
       } catch (error) {
+        this.recordOutcome(error);
         logger.error('GBIF API POST request failed', { path, data, params, error });
         throw error;
       }
@@ -252,6 +290,7 @@ export class GBIFClient {
         logger.debug('Making GBIF API DELETE request', { path, params });
         await this.client.delete(path, { params });
       } catch (error) {
+        this.recordOutcome(error);
         logger.error('GBIF API DELETE request failed', { path, params, error });
         throw error;
       }
