@@ -11,7 +11,7 @@ export class RegistryGetDatasetTool extends BaseTool<{ key: string }, Dataset> {
   protected readonly description = 'Get complete metadata for a specific GBIF dataset by its UUID. Returns full dataset details including title, description, contacts, endpoints, geographic/taxonomic coverage, and citation information.';
 
   protected readonly inputSchema = z.object({
-    key: z.string().uuid().describe(
+    key: z.guid().describe(
       'Dataset UUID (universally unique identifier). A unique identifier for the dataset in GBIF registry. Example: "50c9509d-22c7-4a22-a47d-8c48425ef4a7" (GBIF Backbone Taxonomy). Get UUIDs from gbif_registry_search_datasets.'
     ),
   });

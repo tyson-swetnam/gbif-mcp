@@ -17,7 +17,7 @@ export class RegistrySearchCollectionsTool extends BaseTool<any, GBIFResponse<an
     code: z.string().optional().describe(
       'Collection code filter. The institutional code or acronym for the collection. Example: "USNM" (US National Museum), "K" (Kew Herbarium), "AMNH" (American Museum of Natural History).'
     ),
-    institution: z.string().uuid().optional().describe(
+    institution: z.guid().optional().describe(
       'Filter by parent institution UUID. Returns all collections belonging to a specific institution. Get institution UUIDs from gbif_registry_search_institutions.'
     ),
     country: z.string().length(2).optional().describe(

@@ -11,7 +11,7 @@ export class RegistryGetOrganizationTool extends BaseTool<{ key: string }, Organ
   protected readonly description = 'Get complete details for a specific data-publishing organization. Returns contacts, addresses, datasets published, endorsement status, and institutional information.';
 
   protected readonly inputSchema = z.object({
-    key: z.string().uuid().describe(
+    key: z.guid().describe(
       'Organization UUID. The unique identifier for the organization in GBIF registry. Example: "07f617d0-c688-11d8-bf62-b8a03c50a862" (GBIF Secretariat). Get from gbif_registry_search_organizations.'
     ),
   });

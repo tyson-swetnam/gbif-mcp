@@ -11,7 +11,7 @@ export class RegistryGetNetworkTool extends BaseTool<{ key: string }, Network> {
   protected readonly description = 'Get complete details for a specific dataset network. Returns network metadata, constituent datasets, contacts, and description. Use to understand collaborative data initiatives and their scope.';
 
   protected readonly inputSchema = z.object({
-    key: z.string().uuid().describe(
+    key: z.guid().describe(
       'Network UUID. The unique identifier for the network. Example: UUID for eBird network or iNaturalist network. Get from gbif_registry_search_networks.'
     ),
   });

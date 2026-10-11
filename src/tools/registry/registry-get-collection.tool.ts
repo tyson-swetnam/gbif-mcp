@@ -10,7 +10,7 @@ export class RegistryGetCollectionTool extends BaseTool<{ key: string }, any> {
   protected readonly description = 'Get complete details for a specific scientific collection from GRSciColl. Returns collection metadata, institutional affiliation, specimen holdings, contacts, and preservation methods. Essential for understanding physical specimen repositories.';
 
   protected readonly inputSchema = z.object({
-    key: z.string().uuid().describe(
+    key: z.guid().describe(
       'Collection UUID from GRSciColl. The unique identifier for the collection. Example: UUID for USNM Entomology Collection or Kew Herbarium. Get from gbif_registry_search_collections.'
     ),
   });

@@ -24,6 +24,7 @@ npm run lint         # Lint TypeScript files in src/
 npm run format       # Format code with Prettier
 npm run clean        # Remove build directory
 npm run typecheck    # Type-check without emitting files
+npm run verify:mcp   # Build, then call every tool over stdio under 2026-07-28 and legacy eras (local GBIF stub; add -- --live for real API)
 ```
 
 Run a single test file: `npm test -- tests/unit/species.service.test.ts`
@@ -53,7 +54,7 @@ MCP Transport (stdio) → MCP Protocol Handler → Tool Orchestrator → Service
    - `vocabularies/vocabularies.service.ts` - Standardized terminology
    - `validator/validator.service.ts` - Data quality validation
 
-5. **Tool Layer** (`src/tools/`): ~57 MCP tools organized by domain, all inheriting from `BaseTool` abstract class. Each tool uses Zod schemas for input validation and converts them to JSON Schema via `zod-to-json-schema`.
+5. **Tool Layer** (`src/tools/`): ~57 MCP tools organized by domain, all inheriting from `BaseTool` abstract class. Each tool uses Zod 4 schemas for input validation and converts them to JSON Schema 2020-12 via `z.toJSONSchema()` (input view, so defaulted fields stay optional).
 
 6. **Response Truncation** (`src/utils/response-truncator.ts`): Integrated into `BaseTool.execute()` — automatically truncates responses exceeding 250KB (configurable). For paginated GBIF responses (those with `results` arrays), it fits as many results as possible under the limit and includes pagination guidance. Non-paginated responses get a metadata-only response.
 
@@ -113,8 +114,10 @@ Winston logs to **stderr** (stdout is reserved for MCP protocol). JSON structure
 
 ## MCP Protocol Details
 
-- **Transport**: stdio (`StdioServerTransport`)
+- **SDK**: `@modelcontextprotocol/server` v2 (MCP spec **2026-07-28**). Requires Node 20+ and Zod 4.
+- **Transport**: stdio via `serveStdio(factory)`. The opening message picks the era: 2026-07-28 (`server/discover` + per-request `_meta` envelope) or the legacy `initialize` handshake (2025-11-25 and earlier). `GBIFMCPServer.createServer()` is the factory; it builds a fresh low-level `Server` per connection that shares the GBIF client, tool registry and stats.
 - **Capabilities**: `tools` only
+- **Errors**: unknown tool → `ProtocolError(-32602)`; tool/validation/GBIF failures → `CallToolResult` with `isError: true`
 - **Response Format**: JSON with `content` array containing `text` type
 - GBIF uses `offset`/`limit` pagination with `endOfRecords` flag
 

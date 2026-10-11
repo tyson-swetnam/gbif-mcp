@@ -163,7 +163,7 @@ export class MCPErrorFormatter {
    * Format error for MCP tool response
    */
   static formatToolError(error: Error | MCPError, toolName: string): {
-    content: Array<{ type: string; text: string }>;
+    content: Array<{ type: 'text'; text: string }>;
     isError: boolean;
   } {
     const mcpError = error instanceof MCPError ? error : MCPError.fromError(error);
@@ -180,7 +180,7 @@ export class MCPErrorFormatter {
     return {
       content: [
         {
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify(errorResponse, null, 2),
         },
       ],

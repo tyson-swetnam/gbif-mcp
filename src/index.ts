@@ -7,12 +7,15 @@
  * with comprehensive error handling, correlation tracking, and monitoring.
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+  Server,
+  ProtocolError,
+  ProtocolErrorCode,
+  SUPPORTED_PROTOCOL_VERSIONS,
+  type CallToolResult,
+  type ListToolsResult,
+} from '@modelcontextprotocol/server';
+import { serveStdio, type StdioServerHandle } from '@modelcontextprotocol/server/stdio';
 import { config } from './config/config.js';
 import { logger } from './utils/logger.js';
 import { GBIFClient } from './core/gbif-client.js';
@@ -130,10 +133,9 @@ interface ServerStats {
  * Main GBIF MCP Server
  */
 class GBIFMCPServer {
-  private server: Server;
   private client: GBIFClient;
   private toolRegistry: ToolRegistry;
-  private transport?: StdioServerTransport;
+  private handle?: StdioServerHandle;
   private stats: ServerStats;
   private isShuttingDown = false;
 
@@ -147,20 +149,6 @@ class GBIFMCPServer {
       toolExecutions: new Map(),
     };
 
-    // Create MCP server
-    this.server = new Server(
-      {
-        name: config.server.name,
-        version: config.server.version,
-      },
-      {
-        capabilities: {
-          tools: {},
-          // Resources and prompts can be added here in future phases
-        },
-      }
-    );
-
     // Initialize GBIF client
     this.client = new GBIFClient();
 
@@ -169,7 +157,6 @@ class GBIFMCPServer {
 
     // Setup server components
     this.initializeServices();
-    this.setupHandlers();
     this.setupErrorHandlers();
 
     logger.info('GBIF MCP Server initialized', {
@@ -287,13 +274,44 @@ class GBIFMCPServer {
   }
 
   /**
+   * Create an MCP protocol server instance.
+   *
+   * serveStdio() calls this once per connection (and once per discarded
+   * server/discover probe), so instances share the GBIF client, tool
+   * registry and statistics held by this class.
+   */
+  createServer(): Server {
+    const server = new Server(
+      {
+        name: config.server.name,
+        version: config.server.version,
+      },
+      {
+        capabilities: {
+          tools: {},
+          // Resources and prompts can be added here in future phases
+        },
+      }
+    );
+
+    this.setupHandlers(server);
+
+    server.onerror = (error) => {
+      logger.error('MCP Server error', { error });
+      this.stats.errorCount++;
+    };
+
+    return server;
+  }
+
+  /**
    * Setup MCP protocol request handlers
    */
-  private setupHandlers(): void {
+  private setupHandlers(server: Server): void {
     // Handle list tools request
-    this.server.setRequestHandler(
-      ListToolsRequestSchema,
-      async () => {
+    server.setRequestHandler(
+      'tools/list',
+      async (): Promise<ListToolsResult> => {
         return RequestHandler.withContext('ListTools', async (context) => {
           this.stats.requestCount++;
 
@@ -323,15 +341,30 @@ class GBIFMCPServer {
     );
 
     // Handle call tool request
-    this.server.setRequestHandler(
-      CallToolRequestSchema,
-      async (request) => {
+    server.setRequestHandler(
+      'tools/call',
+      async (request): Promise<CallToolResult> => {
         const { name, arguments: args } = request.params;
 
         return RequestHandler.withContext(
           'CallTool',
           async (context) => {
             this.stats.requestCount++;
+
+            // Unknown tools are a protocol error (-32602), not a tool result
+            const tool = this.toolRegistry.get(name);
+            if (!tool) {
+              this.stats.errorCount++;
+              logger.warn('Unknown tool requested', {
+                correlationId: context.correlationId,
+                tool: name,
+              });
+              throw new ProtocolError(
+                ProtocolErrorCode.InvalidParams,
+                `Unknown tool: ${name}`,
+                { availableTools: this.toolRegistry.getAll().map(t => t.getDefinition().name) }
+              );
+            }
 
             // Update tool execution count
             const currentCount = this.stats.toolExecutions.get(name) || 0;
@@ -344,16 +377,6 @@ class GBIFMCPServer {
             });
 
             try {
-              // Check if tool exists
-              const tool = this.toolRegistry.get(name);
-              if (!tool) {
-                throw new MCPError(
-                  MCPErrorCode.TOOL_NOT_FOUND,
-                  `Tool not found: ${name}`,
-                  { availableTools: this.toolRegistry.getAll().map(t => t.getDefinition().name) }
-                );
-              }
-
               // Check circuit breaker state
               const circuitState = this.client.getCircuitState();
               if (circuitState === 'OPEN') {
@@ -386,7 +409,8 @@ class GBIFMCPServer {
                       limit: '250KB',
                       suggestion: 'Use smaller limit parameter or add more filters to narrow your search. The response exceeded limits even after automatic truncation.'
                     }, null, 2)
-                  }]
+                  }],
+                  isError: true,
                 };
               }
 
@@ -432,12 +456,6 @@ class GBIFMCPServer {
    * Setup error handlers for the server
    */
   private setupErrorHandlers(): void {
-    // Handle server errors
-    this.server.onerror = (error) => {
-      logger.error('MCP Server error', { error });
-      this.stats.errorCount++;
-    };
-
     // Handle unhandled protocol errors
     process.on('uncaughtException', (error) => {
       logger.error('Uncaught exception', {
@@ -468,9 +486,6 @@ class GBIFMCPServer {
     }
 
     try {
-      // Create stdio transport
-      this.transport = new StdioServerTransport();
-
       logger.info('Starting GBIF MCP Server', {
         version: config.server.version,
         tools: this.toolRegistry.getAll().length,
@@ -482,13 +497,26 @@ class GBIFMCPServer {
         },
       });
 
-      // Connect server to transport
-      await this.server.connect(this.transport);
+      // Serve stdio: the opening message selects the protocol era
+      // (2026-07-28 via server/discover, or the legacy initialize handshake)
+      this.handle = serveStdio(() => this.createServer(), {
+        onerror: (error) => {
+          logger.error('MCP transport error', { error });
+          this.stats.errorCount++;
+        },
+      });
+
+      // Per the stdio binding, exit once the client closes our stdin
+      process.stdin.once('end', () => {
+        logger.info('stdin closed by client, shutting down');
+        this.shutdown();
+      });
 
       logger.info('GBIF MCP Server started successfully', {
         serverName: config.server.name,
         version: config.server.version,
         transport: 'stdio',
+        protocolVersions: ['2026-07-28', ...SUPPORTED_PROTOCOL_VERSIONS],
         capabilities: {
           tools: this.toolRegistry.getAll().length,
         },
@@ -496,7 +524,7 @@ class GBIFMCPServer {
 
       // Log server statistics periodically (every 5 minutes)
       if (config.features.enableMetrics) {
-        setInterval(() => this.logStatistics(), 5 * 60 * 1000);
+        setInterval(() => this.logStatistics(), 5 * 60 * 1000).unref();
       }
     } catch (error) {
       logger.error('Failed to start GBIF MCP Server', { error });
@@ -557,7 +585,7 @@ class GBIFMCPServer {
       this.logStatistics();
 
       // Close server connection
-      await this.server.close();
+      await this.handle?.close();
 
       logger.info('GBIF MCP Server shutdown complete');
     } catch (error) {
@@ -627,7 +655,7 @@ async function main() {
         if (health.status !== 'healthy') {
           logger.warn('Server health degraded', { health });
         }
-      }, 60000); // Check every minute
+      }, 60000).unref(); // Check every minute
     }
   } catch (error) {
     logger.error('Fatal error during server startup', {

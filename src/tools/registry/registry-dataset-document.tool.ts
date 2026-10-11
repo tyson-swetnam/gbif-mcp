@@ -10,7 +10,7 @@ export class RegistryDatasetDocumentTool extends BaseTool<{ key: string }, strin
   protected readonly description = 'Get the EML (Ecological Metadata Language) metadata document for a dataset. Returns structured XML metadata including dataset description, contacts, geographic/taxonomic/temporal coverage, methods, and project information. Essential for proper dataset citation, understanding data collection methods, and accessing complete metadata.';
 
   protected readonly inputSchema = z.object({
-    key: z.string().uuid().describe(
+    key: z.guid().describe(
       'Dataset UUID. The unique identifier of the dataset whose EML document you want. EML is the standard metadata format for ecological datasets. Example: "50c9509d-22c7-4a22-a47d-8c48425ef4a7". Returns XML document.'
     ),
   });

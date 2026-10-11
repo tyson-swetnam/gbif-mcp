@@ -437,8 +437,30 @@ claude chat "Use the gbif MCP server to search for Panthera leo"
 ```bash
 # Build and test the server directly
 npm run build
+
+# MCP 2026-07-28: stateless request carrying the protocol _meta envelope
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientInfo":{"name":"cli","version":"1.0.0"},"io.modelcontextprotocol/clientCapabilities":{}}}}' | node build/index.js
+
+# Legacy (2025-era) clients are still served
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | node build/index.js
 ```
+
+### End-to-end protocol verification:
+```bash
+# Spawns the server over stdio and calls every tool under both the
+# 2026-07-28 and legacy protocol eras, against a local GBIF stub
+npm run verify:mcp
+
+# Same checks against the real GBIF API
+npm run verify:mcp -- --live
+```
+
+### MCP protocol support
+
+The server is built on the MCP TypeScript SDK v2 (`@modelcontextprotocol/server`) and implements the
+[2026-07-28 MCP specification](https://modelcontextprotocol.io/specification/2026-07-28): clients
+negotiate via `server/discover` and send stateless requests with a `_meta` envelope. Clients that
+still use the 2025-era `initialize` handshake (2025-11-25 and earlier) are served on the same binary.
 
 ## Available Tools
 
@@ -594,9 +616,9 @@ If you're being rate limited:
 
 ### Node.js Version
 
-Ensure you're using Node.js 18 or higher:
+Ensure you're using Node.js 20 or higher:
 ```bash
-node --version  # Should be v18.0.0 or higher
+node --version  # Should be v20.0.0 or higher
 ```
 
 ## API Coverage
@@ -619,6 +641,9 @@ npm run dev
 
 # Run tests
 npm test
+
+# Verify every tool end-to-end over MCP stdio (2026-07-28 + legacy)
+npm run verify:mcp
 
 # Lint code
 npm run lint

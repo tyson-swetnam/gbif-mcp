@@ -10,7 +10,7 @@ export class RegistryGetInstallationTool extends BaseTool<{ key: string }, any> 
   protected readonly description = 'Get complete details for a specific IPT or data server installation. Returns technical endpoint information, hosting organization, and datasets served by this installation.';
 
   protected readonly inputSchema = z.object({
-    key: z.string().uuid().describe(
+    key: z.guid().describe(
       'Installation UUID. The unique identifier for the installation server. Get from gbif_registry_search_installations.'
     ),
   });

@@ -1,6 +1,5 @@
-import { ZodSchema } from 'zod';
-import { zodToJsonSchema as convertZodToJsonSchema } from 'zod-to-json-schema';
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { z, ZodSchema } from 'zod';
+import type { Tool } from '@modelcontextprotocol/server';
 import { logger } from '../utils/logger.js';
 import { ResponseTruncator } from '../utils/response-truncator.js';
 import { config } from '../config/config.js';
@@ -162,14 +161,18 @@ export abstract class BaseTool<TInput = any, TOutput = any> {
   }
 
   /**
-   * Convert Zod schema to JSON Schema for MCP
+   * Convert Zod schema to JSON Schema for MCP.
+   *
+   * Uses the input view of the schema so fields with defaults stay optional,
+   * and emits JSON Schema 2020-12 (the MCP 2026-07-28 default dialect).
    */
-  protected zodToJsonSchema(schema: ZodSchema): any {
-    // Use the proper zod-to-json-schema library for accurate conversion
-    return convertZodToJsonSchema(schema, {
-      target: 'jsonSchema7',
-      $refStrategy: 'none',
+  protected zodToJsonSchema(schema: ZodSchema): Tool['inputSchema'] {
+    const { $schema: _dialect, ...jsonSchema } = z.toJSONSchema(schema, {
+      target: 'draft-2020-12',
+      io: 'input',
+      unrepresentable: 'any',
     });
+    return jsonSchema as Tool['inputSchema'];
   }
 
   /**

@@ -15,6 +15,7 @@
     "test:integration:api": "vitest tests/integration/api --run",
     "test:all": "vitest run tests/unit && vitest run tests/integration",
     "test:coverage": "vitest run --coverage",
+    "verify:mcp": "npm run build && node scripts/verify-mcp.mjs",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write 'src/**/*.ts'",
     "clean": "rimraf build",
@@ -30,15 +31,16 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@modelcontextprotocol/server": "^2.3.1",
     "axios": "^1.6.0",
     "dotenv": "^16.3.1",
     "lru-cache": "^10.0.0",
     "p-queue": "^8.0.0",
     "winston": "^3.11.0",
-    "zod": "^3.22.0"
+    "zod": "^4.2.0"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "^2.3.1",
     "@types/node": "^20.10.0",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
@@ -53,6 +55,6 @@
     "vitest": "^1.0.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   }
 }

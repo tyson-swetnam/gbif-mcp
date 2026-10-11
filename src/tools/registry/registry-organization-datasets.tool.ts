@@ -11,7 +11,7 @@ export class RegistryOrganizationDatasetsTool extends BaseTool<any, GBIFResponse
   protected readonly description = 'List all datasets published by a specific organization. Shows the complete catalog of datasets contributed by an institution. Useful for understanding an organization\'s data contributions and portfolio.';
 
   protected readonly inputSchema = z.object({
-    organizationKey: z.string().uuid().describe(
+    organizationKey: z.guid().describe(
       'Organization UUID. The unique identifier of the publishing organization. Example: "07f617d0-c688-11d8-bf62-b8a03c50a862". Get from gbif_registry_search_organizations or gbif_registry_get_organization.'
     ),
     type: z.enum(['OCCURRENCE', 'CHECKLIST', 'SAMPLING_EVENT', 'METADATA'])

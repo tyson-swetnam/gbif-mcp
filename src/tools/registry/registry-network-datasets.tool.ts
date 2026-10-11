@@ -11,7 +11,7 @@ export class RegistryNetworkDatasetsTool extends BaseTool<any, GBIFResponse<Data
   protected readonly description = 'List all constituent datasets within a specific network. Shows which datasets are part of a collaborative network. Useful for exploring thematic data collections like eBird observations or marine biodiversity networks.';
 
   protected readonly inputSchema = z.object({
-    networkKey: z.string().uuid().describe(
+    networkKey: z.guid().describe(
       'Network UUID. The unique identifier of the network whose constituent datasets you want to list. Get from gbif_registry_search_networks or gbif_registry_get_network.'
     ),
     limit: z.number().min(1).max(1000).default(20).describe(
