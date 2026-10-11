@@ -705,15 +705,19 @@ All errors are transformed to user-friendly messages with context.
 
 ## Testing Tools
 
-Use MCP inspector or direct JSON-RPC calls:
+Use MCP inspector or direct JSON-RPC calls. The server stops when stdin closes and
+does not answer requests still in flight at that point, so keep stdin open (the
+`sleep`) until the response has arrived:
 
 ```bash
 # List all tools
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | node build/index.js
+{ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'; sleep 2; } | node build/index.js
 
 # Call a tool
-echo '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"gbif_species_search","arguments":{"q":"Puma"}}}' | node build/index.js
+{ echo '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"gbif_species_search","arguments":{"q":"Puma"}}}'; sleep 5; } | node build/index.js
 ```
+
+`npm run verify:mcp` exercises every tool over both protocol eras.
 
 ---
 

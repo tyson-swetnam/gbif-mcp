@@ -16,6 +16,8 @@ import {
   type ListToolsResult,
 } from '@modelcontextprotocol/server';
 import { serveStdio, type StdioServerHandle } from '@modelcontextprotocol/server/stdio';
+import { realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { config } from './config/config.js';
 import { logger } from './utils/logger.js';
 import { GBIFClient } from './core/gbif-client.js';
@@ -666,8 +668,17 @@ async function main() {
   }
 }
 
-// Run the server
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Run the server when executed directly (also via a symlinked bin or a path with spaces)
+function isEntryPoint(): boolean {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
+  } catch {
+    return false;
+  }
+}
+
+if (isEntryPoint()) {
   main().catch((error) => {
     logger.error('Fatal error in main', {
       error,

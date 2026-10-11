@@ -38,6 +38,9 @@ services:
     # MCP servers use stdio for communication, not network ports
     network_mode: none
 
+    # Keep stdin open: per the MCP stdio binding the server exits when stdin closes
+    stdin_open: true
+
     # Security options
     security_opt:
       - no-new-privileges:true

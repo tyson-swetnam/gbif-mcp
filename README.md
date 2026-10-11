@@ -438,11 +438,14 @@ claude chat "Use the gbif MCP server to search for Panthera leo"
 # Build and test the server directly
 npm run build
 
+# The server exits when stdin closes and drops requests still in flight,
+# so keep stdin open (the sleep) until the response arrives.
+
 # MCP 2026-07-28: stateless request carrying the protocol _meta envelope
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientInfo":{"name":"cli","version":"1.0.0"},"io.modelcontextprotocol/clientCapabilities":{}}}}' | node build/index.js
+{ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientInfo":{"name":"cli","version":"1.0.0"},"io.modelcontextprotocol/clientCapabilities":{}}}}'; sleep 2; } | node build/index.js
 
 # Legacy (2025-era) clients are still served
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | node build/index.js
+{ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'; sleep 2; } | node build/index.js
 ```
 
 ### End-to-end protocol verification:
